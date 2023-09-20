@@ -12,11 +12,14 @@
 <div class="tab-content">
   <div id="dedit" class="tab-pane fade show active" role="tabpanel" aria-labelledby="domain-edit">
     <form data-id="editdomain" class="form-horizontal" role="form" method="post">
+      {# Default values for checkboxes #}
       <input type="hidden" value="0" name="active">
       <input type="hidden" value="0" name="backupmx">
       <input type="hidden" value="0" name="gal">
       <input type="hidden" value="0" name="relay_all_recipients">
       <input type="hidden" value="0" name="relay_unknown_only">
+      <input type="hidden" value="0" name="allow_wildcard_aliases">
+      
       <div class="row mb-2" data-acl="{{ acl.domain_desc }}">
         <label class="control-label col-sm-2" for="description">{{ lang.edit.description }}</label>
         <div class="col-sm-10">
@@ -100,6 +103,18 @@
             <br>
             <p>{{ lang.edit.relay_transport_info|raw }}</p>
             <hr style="margin:25px 0px 0px 0px">
+          </div>
+        </div>
+      </div>
+      {# TOTO: NOT WORKING JS ISSUE NEED INVESTIGATE #}
+      <div class="row mb-2 mt-2">
+        <label class="control-label col-sm-2">{{ lang.edit.domain_alias_options }}</label>
+        <div class="col-sm-10">
+          <div class="checkbox">
+            <label><input type="checkbox" value="1" name="allow_wildcard_aliases"{% if result.allow_wildcard_aliases == '1' %} checked{% endif %}> {{ lang.edit.domain_alias_wildcard|raw }}</label>
+            <br>
+            <p>{{ lang.edit.domain_alias_wildcard_info|raw }}</p>
+            <hr>
           </div>
         </div>
       </div>

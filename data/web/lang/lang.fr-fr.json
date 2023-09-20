@@ -489,7 +489,7 @@
     "edit": {
         "active": "Actif",
         "advanced_settings": "Réglages avancés",
-        "alias": "Editer les alias",
+        "alias": "Editer l'alias",
         "allow_from_smtp": "Restreindre l'utilisation de <b>SMTP</b> à ces adresses IP",
         "allow_from_smtp_info": "Laissez vide pour autoriser tous les expéditeurs.<br>Adresses IPv4/IPv6 et réseaux.",
         "allowed_protocols": "Protocoles autorisés",
