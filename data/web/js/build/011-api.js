@@ -155,8 +155,6 @@ $(document).ready(function() {
         }
       });
       if (!invalid) {
-        console.log($(this).closest("form").serializeObject());
-        console.log(JSON.stringify($(this).closest("form").serializeObject(), null, 2));
         var attr_to_merge = $(this).closest("form").serializeObject();
         // parse possible JSON Strings
         for (var [key, value] of Object.entries(attr_to_merge)) {
