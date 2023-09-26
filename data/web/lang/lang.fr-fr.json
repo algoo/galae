@@ -107,7 +107,9 @@
         "validation_success": "Validation réussie",
         "bcc_dest_format": "La destination Cci doit être une seule adresse e-mail valide.<br>Si vous avez besoin d'envoyer une copie à plusieurs adresses, créez un alias et utilisez-le ici.",
         "tags": "Etiquettes",
-        "app_passwd_protocols": "Protocoles autorisés pour le mot de passe de l'application"
+        "app_passwd_protocols": "Protocoles autorisés pour le mot de passe de l'application",
+        "alias_wildcard_address": "Alias générique d'email",
+        "alias_wildcard_address_info": "<span class=\"badge fs-6 bg-info\">Info</span> Utilisez <code>*</code> comme motif dans la partie locale de l'email pour attraper tous les messages correspondant au modèle."
     },
     "admin": {
         "access": "Accès",
@@ -450,7 +452,9 @@
         "demo_mode_enabled": "Le mode de démonstration est activé",
         "template_exists": "La template %s existe déja",
         "template_id_invalid": "Le numéro de template %s est invalide",
-        "template_name_invalid": "Le nom de la template est invalide"
+        "template_name_invalid": "Le nom de la template est invalide",
+        "alias_wildcard_domain_mismatch": "Le domaine de l'alias ne peut pas être modifié, veuillez supprimer l'alias et en créer un nouveau.",
+        "alias_wildcard_invalid": "Un alias générique doit contenir un et un seul \"*\" dans la partie locale de son email"
     },
     "debug": {
         "chart_this_server": "Graphique (ce serveur)",
@@ -589,7 +593,10 @@
         "username": "Nom d'utilisateur",
         "validate_save": "Valider et sauver",
         "lookup_mx": "La destination est une expression régulière qui doit correspondre avec le nom du MX (<code>.*\\.google\\.com</code> pour acheminer tout le courrier destiné à un MX se terminant par google.com via ce saut)",
-        "mailbox_relayhost_info": "S'applique uniquement à la boîte aux lettres et aux alias directs, remplace le relayhost du domaine."
+        "mailbox_relayhost_info": "S'applique uniquement à la boîte aux lettres et aux alias directs, remplace le relayhost du domaine.",
+        "alias_wildcard": "Editer l'alias générique",
+        "domain_alias_wildcard": "Permettre la création d'alias d'email avec un caractère de substitution <small>(ellen*@wayland-yutani.earth)</small>",
+        "domain_alias_wildcard_info": "<div class=\"badge fs-6 bg-warning\">Attention</div> Cette option autorise tous les administrateurs du domaine à créer des alias d'email avec un caractère de substitution \"*\". Un alias générique ne remplacera jamais une boîte aux lettres existante."
     },
     "footer": {
         "cancel": "Annuler",
@@ -777,7 +784,10 @@
         "username": "Nom d'utilisateur",
         "waiting": "En attente",
         "weekly": "Hebdomadaire",
-        "yes": "&#10003;"
+        "yes": "&#10003;",
+        "add_alias_wildcard": "Ajouter un alias générique",
+        "allow_aliases_wildcard": "Alias générique",
+        "is_wildcard_alias": "Est un aias générique"
     },
     "oauth2": {
         "access_denied": "Veuillez vous connecter en tant que propriétaire de la boîte pour accorder l’accès via Oauth2.",
