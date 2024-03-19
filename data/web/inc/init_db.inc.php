@@ -178,6 +178,7 @@ function init_db_schema() {
           "modified" => "DATETIME ON UPDATE CURRENT_TIMESTAMP",
           "private_comment" => "TEXT",
           "public_comment" => "TEXT",
+          "is_wildcard" => "TINYINT(1) NOT NULL DEFAULT '0'",
           "sogo_visible" => "TINYINT(1) NOT NULL DEFAULT '1'",
           "active" => "TINYINT(1) NOT NULL DEFAULT '1'"
         ),
@@ -256,6 +257,7 @@ function init_db_schema() {
           "gal" => "TINYINT(1) NOT NULL DEFAULT '1'",
           "relay_all_recipients" => "TINYINT(1) NOT NULL DEFAULT '0'",
           "relay_unknown_only" => "TINYINT(1) NOT NULL DEFAULT '0'",
+          "allow_wildcard_aliases" => "TINYINT(1) NOT NULL DEFAULT '0'",
           "created" => "DATETIME(0) NOT NULL DEFAULT NOW(0)",
           "modified" => "DATETIME ON UPDATE CURRENT_TIMESTAMP",
           "active" => "TINYINT(1) NOT NULL DEFAULT '1'"

@@ -602,6 +602,14 @@ jQuery(function($){
           className: 'none'
         },
         {
+          title: lang.allow_aliases_wildcard,
+          data: 'allow_wildcard_aliases',
+          defaultContent: '',
+          render: function (data, type) {
+            return 1==data?'<i class="bi bi-check-lg text-warning"><span class="sorting-value">1</span></i>':(0==data?'<i class="bi bi-x-lg"><span class="sorting-value">0</span></i>':2==data&&'&#8212;');
+          }
+        },
+        {
           title: lang.active,
           data: 'active',
           defaultContent: '',
@@ -1917,6 +1925,14 @@ jQuery(function($){
           title: lang.bcc_destinations,
           data: 'bcc_dest',
           defaultContent: ''
+        },
+        {
+          title: lang.is_wildcard_alias,
+          data: 'is_wildcard',
+          defaultContent: '',
+          render: function(data, type){
+            return 1==data?'<i class="bi bi-check-lg text-warning"><span class="sorting-value">1</span></i>':0==data&&'<i class="bi bi-x-lg"><span class="sorting-value">0</span></i>';
+          }
         },
         {
           title: lang.sogo_visible,

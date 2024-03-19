@@ -30,6 +30,9 @@
             {% endif %}
           </ul>
           <a class="btn btn-sm btn-secondary" data-action="edit_selected" data-id="alias" data-api-url='edit/alias' data-api-attr='{"expand_alias":true}' ><i class="bi bi-arrows-angle-expand"></i> {{ lang.mailbox.add_alias_expand }}</a>
+          {% if wildcard_domains %}
+            <a class="btn btn-sm btn-warning" href="#" data-bs-toggle="modal" data-bs-target="#addAliasWildcardModal"><i class="bi bi-plus-lg"></i> {{ lang.mailbox.add_alias_wildcard }}</a>
+          {% endif %}
           <a class="btn btn-sm btn-success" href="#" data-bs-toggle="modal" data-bs-target="#addAliasModal"><i class="bi bi-plus-lg"></i> {{ lang.mailbox.add_alias }}</a>
         </div>
       </div>
@@ -54,6 +57,9 @@
             {% endif %}
           </ul>
           <a class="btn btn-sm btn-secondary" data-action="edit_selected" data-id="alias" data-api-url='edit/alias' data-api-attr='{"expand_alias":true}' ><i class="bi bi-arrows-angle-expand"></i> {{ lang.mailbox.add_alias_expand }}</a>
+          {% if wildcard_domains %}
+            <a class="btn btn-sm btn-warning" href="#" data-bs-toggle="modal" data-bs-target="#addAliasWildcardModal"><i class="bi bi-plus-lg"></i> {{ lang.mailbox.add_alias_wildcard }}</a>
+          {% endif %}
           <a class="btn btn-sm btn-success" href="#" data-bs-toggle="modal" data-bs-target="#addAliasModal"><i class="bi bi-plus-lg"></i> {{ lang.mailbox.add_alias }}</a>
         </div>
       </div>
