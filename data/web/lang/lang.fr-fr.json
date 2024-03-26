@@ -108,8 +108,8 @@
         "bcc_dest_format": "La destination Cci doit être une seule adresse e-mail valide.<br>Si vous avez besoin d'envoyer une copie à plusieurs adresses, créez un alias et utilisez-le ici.",
         "tags": "Etiquettes",
         "app_passwd_protocols": "Protocoles autorisés pour le mot de passe de l'application",
-        "alias_wildcard_address": "Alias générique d'email",
-        "alias_wildcard_address_info": "<span class=\"badge fs-6 bg-info\">Info</span> Utilisez <code>*</code> comme motif dans la partie locale de l'email pour attraper tous les messages correspondant au modèle."
+        "alias_wildcard_address": "Alias générique d'e-mail",
+        "alias_wildcard_address_info": "<span class=\"badge fs-6 bg-info\">Info</span> Utilisez <code>*</code> comme motif dans la partie locale de l'e-mail pour attraper tous les messages correspondant au modèle."
     },
     "admin": {
         "access": "Accès",
@@ -454,7 +454,7 @@
         "template_id_invalid": "Le numéro de template %s est invalide",
         "template_name_invalid": "Le nom de la template est invalide",
         "alias_wildcard_domain_mismatch": "Le domaine de l'alias ne peut pas être modifié, veuillez supprimer l'alias et en créer un nouveau.",
-        "alias_wildcard_invalid": "Un alias générique doit contenir un et un seul \"*\" dans la partie locale de son email"
+        "alias_wildcard_invalid": "Un alias générique doit contenir un et un seul \"*\" dans la partie locale de son e-mail"
     },
     "debug": {
         "chart_this_server": "Graphique (ce serveur)",
@@ -595,8 +595,9 @@
         "lookup_mx": "La destination est une expression régulière qui doit correspondre avec le nom du MX (<code>.*\\.google\\.com</code> pour acheminer tout le courrier destiné à un MX se terminant par google.com via ce saut)",
         "mailbox_relayhost_info": "S'applique uniquement à la boîte aux lettres et aux alias directs, remplace le relayhost du domaine.",
         "alias_wildcard": "Editer l'alias générique",
-        "domain_alias_wildcard": "Permettre la création d'alias d'email avec un caractère de substitution <small>(ellen*@wayland-yutani.earth)</small>",
-        "domain_alias_wildcard_info": "<div class=\"badge fs-6 bg-warning\">Attention</div> Cette option autorise tous les administrateurs du domaine à créer des alias d'email avec un caractère de substitution \"*\". Un alias générique ne remplacera jamais une boîte aux lettres existante."
+        "domain_alias_options": "Options d'alias",
+        "domain_alias_wildcard": "Permettre la création d'alias d'e-mail avec un caractère de substitution <small>(ellen*@wayland-yutani.earth)</small>",
+        "domain_alias_wildcard_info": "<div class=\"badge fs-6 bg-warning\">Attention</div> Cette option autorise tous les administrateurs du domaine à créer des alias d'e-mail avec un caractère de substitution \"*\". Un alias générique ne remplacera jamais une boîte aux lettres existante."
     },
     "footer": {
         "cancel": "Annuler",
@@ -655,7 +656,7 @@
         "alias": "Alias",
         "alias_domain_alias_hint": "Les alias <b>ne sont pas</b> appliqués automatiquement sur les alias de domaine. Un alias d'adresse <code>my-alias@domain</code> <b>ne couvre pas</b> l'adresse <code>my-alias@alias-domain</code> (où \"alias-domain\" est un alias imaginaire pour \"domain\").<br>Veuillez utiliser un filtre à tamis pour rediriger le courrier vers une boîte externe (voir l'onglet \"Filtres\" ou utilisez SOGo -> Forwarder).",
         "alias_domain_backupmx": "Alias de domaine inactif pour le domaine relais",
-        "aliases": "Aliases",
+        "aliases": "Alias",
         "allow_from_smtp": "Restreindre l'utilisation de <b>SMTP</b> à ces adresses IP",
         "allow_from_smtp_info": "Laissez vide pour autoriser tous les expéditeurs.<br>Adresses IPv4/IPv6 et réseaux.",
         "allowed_protocols": "Protocoles autorisés",
@@ -787,7 +788,7 @@
         "yes": "&#10003;",
         "add_alias_wildcard": "Ajouter un alias générique",
         "allow_aliases_wildcard": "Alias générique",
-        "is_wildcard_alias": "Est un aias générique"
+        "is_wildcard_alias": "Est un alias générique"
     },
     "oauth2": {
         "access_denied": "Veuillez vous connecter en tant que propriétaire de la boîte pour accorder l’accès via Oauth2.",
