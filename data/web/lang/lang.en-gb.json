@@ -39,7 +39,7 @@
         "alias_address": "Alias address/es",
         "alias_address_info": "<small>Full email address/es or @example.com, to catch all messages for a domain (comma-separated). <b>mailcow domains only</b>.</small>",
         "alias_wildcard_address": "Wildcard alias address",
-        "alias_wildcard_address_info": "<span class=\"badge fs-6 bg-info\">Info</span> Use <code>*</code> as pattern into the local part of an email address to catch all messages matching with the pattern.",
+        "alias_wildcard_address_info": "<span class=\"badge fs-6 bg-info\">Info</span> Use the wildcard character “<code>*</code>” to mean “everything”. For example if you put “super*” as the alias name, then emails sent to anything starting with “super” (supercat@, supercomputer@, etc.) will go to your mailbox.",
         "alias_domain": "Alias domain",
         "alias_domain_info": "<small>Valid domain names only (comma-separated).</small>",
         "app_name": "App name",
@@ -566,7 +566,6 @@
         "advanced_settings": "Advanced settings",
         "alias": "Edit alias",
         "alias_wildcard": "Edit wildcard alias",
-        
         "allow_from_smtp": "Only allow these IPs to use <b>SMTP</b>",
         "allow_from_smtp_info": "Leave empty to allow all senders.<br>IPv4/IPv6 addresses and networks.",
         "allowed_protocols": "Allowed protocols",
