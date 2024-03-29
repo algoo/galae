@@ -39,3 +39,16 @@ mailcow is a registered word mark of The Infrastructure Company GmbH, Parkstr. 4
 The project is managed and maintained by The Infrastructure Company GmbH.
 
 Originated from @andryyy (André)
+
+## Update existing installation for wildcard aliases support
+
+The wildcard aliases support introduced in [this PR](https://github.com/algoo/galae/pull/5) requires a database schema update for existing mailcow installations. For the moment, this need
+to be done manually. Below is a (very) succinct explanation:
+
+- connect to the MySQL mailcow database
+- run the following SQL commands:
+
+```SQL
+ALTER TABLE alias ADD COLUMN is_wildcard tinyint(1) NOT NULL DEFAULT '0' AFTER public_comment;
+ALTER TABLE domain ADD COLUMN allow_wildcard_aliases tinyint(1) NOT NULL DEFAULT '0' AFTER relay_unknown_only;
+```
