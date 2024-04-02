@@ -109,7 +109,7 @@
         "tags": "Etiquettes",
         "app_passwd_protocols": "Protocoles autorisés pour le mot de passe de l'application",
         "alias_wildcard_address": "Alias générique d'e-mail",
-        "alias_wildcard_address_info": "<span class=\"badge fs-6 bg-info\">Info</span> Utilisez <code>*</code> comme motif dans la partie locale de l'e-mail pour attraper tous les messages correspondant au modèle."
+        "alias_wildcard_address_info": "<span class=\"badge fs-6 bg-info\">Info</span> Utilisez le caractère joker « <code>*</code> » pour signifier « n’importe quoi ». Par exemple, si vous utilisez « super* » comme alias, tous les e-mails envoyés à une adresse commençant par « super » (superviseur@, supercomputer@, etc.) arriveront dans la boite mail correspondante à l’alias."
     },
     "admin": {
         "access": "Accès",
