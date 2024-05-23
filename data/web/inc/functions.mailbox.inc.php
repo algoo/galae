@@ -528,11 +528,15 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
             );
             return false;
           }
-          $active = (isset($_data['active'])) ? intval($_data['active']) : $DOMAIN_DEFAULT_ATTRIBUTES['active'];
-          $relay_all_recipients = (isset($_data['relay_all_recipients'])) ? intval($_data['relay_all_recipients']) : $DOMAIN_DEFAULT_ATTRIBUTES['relay_all_recipients'];
-          $relay_unknown_only = (isset($_data['relay_unknown_only'])) ? intval($_data['relay_unknown_only']) : $DOMAIN_DEFAULT_ATTRIBUTES['relay_unknown_only'];
-          $backupmx = (isset($_data['backupmx'])) ? intval($_data['backupmx']) : $DOMAIN_DEFAULT_ATTRIBUTES['backupmx'];
-          $gal = (isset($_data['gal'])) ? intval($_data['gal']) : $DOMAIN_DEFAULT_ATTRIBUTES['gal'];
+          $active = intval($_data['active']);
+          $relay_all_recipients = intval($_data['relay_all_recipients']);
+          $relay_unknown_only = intval($_data['relay_unknown_only']);
+          $allow_wildcard_aliases= (int)$_data['allow_wildcard_aliases'];
+          if ($allow_wildcard_aliases != 1) {
+            $allow_wildcard_aliases = 0;
+          }
+          $backupmx = intval($_data['backupmx']);
+          $gal = intval($_data['gal']);
           if ($relay_all_recipients == 1) {
             $backupmx = '1';
           }
@@ -588,8 +592,8 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
             ':domain' => '%@' . $domain
           ));
           // save domain
-          $stmt = $pdo->prepare("INSERT INTO `domain` (`domain`, `description`, `aliases`, `mailboxes`, `defquota`, `maxquota`, `quota`, `backupmx`, `gal`, `active`, `relay_unknown_only`, `relay_all_recipients`)
-            VALUES (:domain, :description, :aliases, :mailboxes, :defquota, :maxquota, :quota, :backupmx, :gal, :active, :relay_unknown_only, :relay_all_recipients)");
+          $stmt = $pdo->prepare("INSERT INTO `domain` (`domain`, `description`, `aliases`, `mailboxes`, `defquota`, `maxquota`, `quota`, `backupmx`, `gal`, `active`, `relay_unknown_only`, `relay_all_recipients`, `allow_wildcard_aliases`)
+            VALUES (:domain, :description, :aliases, :mailboxes, :defquota, :maxquota, :quota, :backupmx, :gal, :active, :relay_unknown_only, :relay_all_recipients, :allow_wildcard_aliases)");
           $stmt->execute(array(
             ':domain' => $domain,
             ':description' => $description,
@@ -602,7 +606,8 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
             ':gal' => $gal,
             ':active' => $active,
             ':relay_unknown_only' => $relay_unknown_only,
-            ':relay_all_recipients' => $relay_all_recipients
+            ':relay_all_recipients' => $relay_all_recipients,
+            ':allow_wildcard_aliases' => $allow_wildcard_aliases
           ));
           // save tags
           foreach($tags as $index => $tag){
@@ -679,6 +684,13 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
           return true;
         break;
         case 'alias':
+          // catch if it is an alias with wildcard pattern
+          $wildcard = (int)$_data['alias_wildcard'];
+          if ($wildcard != 1) {
+            $wildcard = 0;
+          }
+
+          // get regular alias data
           $addresses  = array_map('trim', preg_split( "/( |,|;|\n)/", $_data['address']));
           $gotos      = array_map('trim', preg_split( "/( |,|;|\n)/", $_data['goto']));
           $active = intval($_data['active']);
@@ -688,6 +700,34 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
           $goto_ham = intval($_data['goto_ham']);
           $private_comment = $_data['private_comment'];
           $public_comment = $_data['public_comment'];
+
+          // in case of a wildcard alias replace some vars and validate data
+          if ($wildcard == 1) {
+            $wc_local_part = strtolower(trim($_data['local_part']));
+            $wc_domain = idn_to_ascii(strtolower(trim($_data['domain'])), 0, INTL_IDNA_VARIANT_UTS46);
+            if (empty($wc_local_part) || empty($wc_domain)) {
+              $_SESSION['return'][] = array(
+                'type' => 'danger',
+                'log' => array(__FUNCTION__, $_action, $_type, $_data_log, $_attr),
+                'msg' => 'alias_empty'
+              );
+              return false;
+            }
+
+            if (substr_count($wc_local_part, '*') != 1) {
+              $_SESSION['return'][] = array(
+                'type' => 'danger',
+                'log' => array(__FUNCTION__, $_action, $_type, $_data_log, $_attr),
+                'msg' => 'alias_wildcard_invalid'
+              );
+              return false;
+            }
+
+            $addresses = array($wc_local_part . '@' . $wc_domain);
+            $gotos = array($_data['mbox_target']);
+            $sogo_visible = 0;
+          }
+          
           if (strlen($private_comment) > 160 | strlen($public_comment) > 160){
             $_SESSION['return'][] = array(
               'type' => 'danger',
@@ -765,11 +805,31 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
             if (in_array($address, $gotos)) {
               continue;
             }
-            $domain       = idn_to_ascii(substr(strstr($address, '@'), 1), 0, INTL_IDNA_VARIANT_UTS46);
-            $local_part   = strstr($address, '@', true);
-            $address      = $local_part.'@'.$domain;
+
+            // In case of a wildcard alias, don't need to reprocess
+            $domain = '';
+            $local_part = '';
+            if ($wildcard == 1) {
+              $domain = $wc_domain;
+              $local_part = $wc_local_part;
+            }
+            else {
+              $domain       = idn_to_ascii(substr(strstr($address, '@'), 1), 0, INTL_IDNA_VARIANT_UTS46);
+              $local_part   = strstr($address, '@', true);
+              $address      = $local_part.'@'.$domain;
+            }
+
             $domaindata = mailbox('get', 'domain_details', $domain);
-            if (is_array($domaindata) && $domaindata['aliases_left'] == "0") {
+            // check if domain exists
+            if ($domaindata == false) {
+              $_SESSION['return'][] = array(
+                'type' => 'danger',
+                'log' => array(__FUNCTION__, $_action, $_type, $_data_log, $_attr),
+                'msg' => array('domain_not_found', htmlspecialchars($domain))
+              );
+            }
+            // check if there are aliases left
+            if ($domaindata['aliases_left'] == "0") {
               $_SESSION['return'][] = array(
                 'type' => 'danger',
                 'log' => array(__FUNCTION__, $_action, $_type, $_data_log, $_attr),
@@ -777,6 +837,16 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
               );
               return false;
             }
+            // check if domain allows wildcard aliases when wildcard is set
+            if ($domaindata['allow_wildcard_aliases'] === "0" && $wildcard == 1) {
+              $_SESSION['return'][] = array(
+                'type' => 'danger',
+                'log' => array(__FUNCTION__, $_action, $_type, $_data_log, $_attr),
+                'msg' => 'wildcard_aliases_not_allowed'
+              );
+              return false;
+            }
+
             $stmt = $pdo->prepare("SELECT `address` FROM `alias`
               WHERE `address`= :address OR `address` IN (
                 SELECT `username` FROM `mailbox`, `alias_domain`
@@ -837,8 +907,8 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
               );
               continue;
             }
-            $stmt = $pdo->prepare("INSERT INTO `alias` (`address`, `public_comment`, `private_comment`, `goto`, `domain`, `sogo_visible`, `active`)
-              VALUES (:address, :public_comment, :private_comment, :goto, :domain, :sogo_visible, :active)");
+            $stmt = $pdo->prepare("INSERT INTO `alias` (`address`, `public_comment`, `private_comment`, `goto`, `domain`, `is_wildcard`, `sogo_visible`, `active`)
+              VALUES (:address, :public_comment, :private_comment, :goto, :domain, :is_wildcard, :sogo_visible, :active)");
             if (!filter_var($address, FILTER_VALIDATE_EMAIL) === true) {
               $stmt->execute(array(
                 ':address' => '@'.$domain,
@@ -847,6 +917,7 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
                 ':address' => '@'.$domain,
                 ':goto' => $goto,
                 ':domain' => $domain,
+                ':is_wildcard' => $wildcard,
                 ':sogo_visible' => $sogo_visible,
                 ':active' => $active
               ));
@@ -858,6 +929,7 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
                 ':private_comment' => $private_comment,
                 ':goto' => $goto,
                 ':domain' => $domain,
+                ':is_wildcard' => $wildcard,
                 ':sogo_visible' => $sogo_visible,
                 ':active' => $active
               ));
@@ -1010,7 +1082,7 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
             );
             return false;
           }
-          if (empty($_data['local_part'])) {
+          if (empty($_data['local_part']) && $_data['local_part'] !== '0') {
             $_SESSION['return'][] = array(
               'type' => 'danger',
               'log' => array(__FUNCTION__, $_action, $_type, $_data_log, $_attr),
@@ -2331,6 +2403,7 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
               $private_comment = (isset($_data['private_comment'])) ? $_data['private_comment'] : $is_now['private_comment'];
               $goto = (!empty($_data['goto'])) ? $_data['goto'] : $is_now['goto'];
               $address = (!empty($_data['address'])) ? $_data['address'] : $is_now['address'];
+              $is_wildcard = $is_now['is_wildcard'];
             }
             else {
               $_SESSION['return'][] = array(
@@ -2340,6 +2413,44 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
               );
               continue;
             }
+
+            // in case of a wildcard alias replace some vars and validate data
+            if ($is_wildcard == 1) {
+              $wc_local_part = strtolower(trim($_data['local_part']));
+              $wc_domain = idn_to_ascii(strtolower(trim($_data['domain'])), 0, INTL_IDNA_VARIANT_UTS46);
+
+              if (empty($wc_local_part) || empty($wc_domain)) {
+                $_SESSION['return'][] = array(
+                  'type' => 'danger',
+                  'log' => array(__FUNCTION__, $_action, $_type, $_data_log, $_attr),
+                  'msg' => 'alias_empty'
+                );
+                return false;
+              }
+
+              if (substr(strstr($address, '@'), 1) != $wc_domain) {
+                $_SESSION['return'][] = array(
+                  'type' => 'danger',
+                  'log' => array(__FUNCTION__, $_action, $_type, $_data_log, $_attr),
+                  'msg' => 'alias_wildcard_domain_mismatch'
+                );
+                return false;
+              }
+
+              if (substr_count($wc_local_part, '*') != 1) {
+                $_SESSION['return'][] = array(
+                  'type' => 'danger',
+                  'log' => array(__FUNCTION__, $_action, $_type, $_data_log, $_attr),
+                  'msg' => 'alias_wildcard_invalid'
+                );
+                return false;
+              }
+
+              $address = $wc_local_part . '@' . $wc_domain;
+              $goto = $_data['mbox_target'];
+              $sogo_visible = 0;
+            }
+
             if ($_data['expand_alias'] === true || $_data['expand_alias'] == 1) {
               $stmt = $pdo->prepare("SELECT `address` FROM `alias`
                 WHERE `address` = :address
@@ -2386,10 +2497,23 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
               );
               continue;
             }
-            $domain = idn_to_ascii(substr(strstr($address, '@'), 1), 0, INTL_IDNA_VARIANT_UTS46);
-            if ($is_now['address'] != $address) {
+
+            // In case of a wildcard alias, don't need to reprocess
+            $domain     = '';
+            $local_part = '';
+            if ($is_wildcard == 1) {
+              $domain     = $wc_domain;
+              $local_part = $wc_local_part;
+            }
+            else {
+              $domain     = idn_to_ascii(substr(strstr($address, '@'), 1), 0, INTL_IDNA_VARIANT_UTS46);
               $local_part = strstr($address, '@', true);
-              $address      = $local_part.'@'.$domain;
+              $address    = $local_part.'@'.$domain;
+            }
+
+            // check if the address was changed
+            if ($is_now['address'] != $address) {
+              // check if the user has access to the domain
               if (!hasDomainAccess($_SESSION['mailcow_cc_username'], $_SESSION['mailcow_cc_role'], $domain)) {
                 $_SESSION['return'][] = array(
                   'type' => 'danger',
@@ -2398,14 +2522,16 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
                 );
                 continue;
               }
-              if ((!filter_var($address, FILTER_VALIDATE_EMAIL) === true) && !empty($local_part)) {
-                $_SESSION['return'][] = array(
-                  'type' => 'danger',
-                  'log' => array(__FUNCTION__, $_action, $_type, $_data_log, $_attr),
-                  'msg' => array('alias_invalid', $address)
-                );
-                continue;
+              // check if the address is valid
+              if (filter_var($address, FILTER_VALIDATE_EMAIL) === false && !empty($local_part)){
+                  $_SESSION['return'][] = array(
+                    'type' => 'danger',
+                    'log' => array(__FUNCTION__, $_action, $_type, $_data_log, $_attr),
+                    'msg' => array('alias_invalid', $address)
+                  );
+                  continue;
               }
+              // check if the address was changed
               if (strtolower($is_now['address']) != strtolower($address)) {
                 $stmt = $pdo->prepare("SELECT `address` FROM `alias`
                   WHERE `address`= :address OR `address` IN (
@@ -2419,6 +2545,7 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
                   ':address_d' => $domain
                 ));
                 $num_results = count($stmt->fetchAll(PDO::FETCH_ASSOC));
+                // check if the address is used by an alias or mailbox
                 if ($num_results != 0) {
                   $_SESSION['return'][] = array(
                     'type' => 'danger',
@@ -2428,6 +2555,7 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
                   continue;
                 }
               }
+
               $stmt = $pdo->prepare("SELECT `domain` FROM `domain`
                 WHERE `domain`= :domain1 OR `domain` = (SELECT `target_domain` FROM `alias_domain` WHERE `alias_domain` = :domain2)");
               $stmt->execute(array(':domain1' => $domain, ':domain2' => $domain));
@@ -2612,6 +2740,7 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
                 $quota                = (!empty($_data['quota'])) ? $_data['quota'] : ($is_now['max_quota_for_domain'] / 1048576);
                 $description          = (!empty($_data['description'])) ? $_data['description'] : $is_now['description'];
                 $tags                 = (is_array($_data['tags']) ? $_data['tags'] : array());
+                $allow_wildcard       = (isset($_data['allow_wildcard_aliases'])) ? intval($_data['allow_wildcard_aliases']) : $is_now['allow_wildcard_aliases'];
                 if ($relay_all_recipients == '1') {
                   $backupmx = '1';
                 }
@@ -2723,7 +2852,8 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
               `relayhost` = :relayhost,
               `mailboxes` = :mailboxes,
               `aliases` = :aliases,
-              `description` = :description
+              `description` = :description,
+              `allow_wildcard_aliases` = :allow_wildcard_aliases
                 WHERE `domain` = :domain");
               $stmt->execute(array(
                 ':relay_all_recipients' => $relay_all_recipients,
@@ -2738,6 +2868,7 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
                 ':mailboxes' => $mailboxes,
                 ':aliases' => $aliases,
                 ':description' => $description,
+                ':allow_wildcard_aliases' => $allow_wildcard,
                 ':domain' => $domain
               ));
               // save tags
@@ -4111,6 +4242,7 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
             `public_comment`,
             `private_comment`,
             `active`,
+            `is_wildcard`,
             `sogo_visible`,
             `created`,
             `modified`
@@ -4142,6 +4274,7 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
           (!filter_var($aliasdata['address'], FILTER_VALIDATE_EMAIL)) ? $aliasdata['is_catch_all'] = 1 : $aliasdata['is_catch_all'] = 0;
           $aliasdata['active'] = $row['active'];
           $aliasdata['active_int'] = $row['active'];
+          $aliasdata['is_wildcard'] = $row['is_wildcard'];
           $aliasdata['sogo_visible'] = $row['sogo_visible'];
           $aliasdata['sogo_visible_int'] = $row['sogo_visible'];
           $aliasdata['created'] = $row['created'];
@@ -4266,10 +4399,13 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
         break;
         case 'domain_details':
           $domaindata = array();
+          # Convert the domain name to lowercase and then convert it to its Punycode representation.
           $_data = idn_to_ascii(strtolower(trim($_data)), 0, INTL_IDNA_VARIANT_UTS46);
+          # Check if the user has access to the domain.
           if (!hasDomainAccess($_SESSION['mailcow_cc_username'], $_SESSION['mailcow_cc_role'], $_data)) {
             return false;
           }
+          # Check if the domain is an alias domain and get the target domain.
           $stmt = $pdo->prepare("SELECT `target_domain` FROM `alias_domain` WHERE `alias_domain` =  :domain");
           $stmt->execute(array(
             ':domain' => $_data
@@ -4278,6 +4414,7 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
           if (!empty($row)) {
             $_data = $row['target_domain'];
           }
+          # Get the domain data.
           $stmt = $pdo->prepare("SELECT
               `domain`,
               `description`,
@@ -4293,7 +4430,8 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
               `relay_unknown_only`,
               `backupmx`,
               `gal`,
-              `active`
+              `active`,
+              `allow_wildcard_aliases`
                 FROM `domain` WHERE `domain`= :domain");
           $stmt->execute(array(
             ':domain' => $_data
@@ -4302,6 +4440,7 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
           if (empty($row)) {
             return false;
           }
+          # Get mailbox data for the domain.
           $stmt = $pdo->prepare("SELECT COUNT(`username`) AS `count`,
             COALESCE(SUM(`quota`), 0) AS `in_use`
               FROM `mailbox`
@@ -4309,35 +4448,54 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
                   AND `domain` = :domain");
           $stmt->execute(array(':domain' => $row['domain']));
           $MailboxDataDomain = $stmt->fetch(PDO::FETCH_ASSOC);
+          # Get the quota for the domain.
           $stmt = $pdo->prepare("SELECT SUM(bytes) AS `bytes_total`, SUM(messages) AS `msgs_total` FROM `quota2`
             WHERE `username` IN (
               SELECT `username` FROM `mailbox`
                 WHERE `domain` = :domain
             );");
+          // Get the domain quota from the database
           $stmt->execute(array(':domain' => $row['domain']));
           $SumQuotaInUse = $stmt->fetch(PDO::FETCH_ASSOC);
+
+          // Get the rate limit information for the domain
           $rl = ratelimit('get', 'domain', $_data);
+
+          // Store the maximum quota that can be assigned to a mailbox in the domain
           $domaindata['max_new_mailbox_quota']  = ($row['quota'] * 1048576) - $MailboxDataDomain['in_use'];
+
+          // If the maximum quota is larger than the domain's maxquota, set the maximum quota to the domain's maxquota
           if ($domaindata['max_new_mailbox_quota'] > ($row['maxquota'] * 1048576)) {
             $domaindata['max_new_mailbox_quota'] = ($row['maxquota'] * 1048576);
           }
+
+          // Set the default quota to the maximum quota
           $domaindata['def_new_mailbox_quota'] = $domaindata['max_new_mailbox_quota'];
+
+          // If the default quota is larger than the domain's defquota, set the default quota to the domain's defquota
           if ($domaindata['def_new_mailbox_quota'] > ($row['defquota'] * 1048576)) {
             $domaindata['def_new_mailbox_quota'] = ($row['defquota'] * 1048576);
           }
+
+          // Set the quota used in the domain
           $domaindata['quota_used_in_domain'] = $MailboxDataDomain['in_use'];
+
+          // Set the total bytes used in the domain
           if (!empty($SumQuotaInUse['bytes_total'])) {
             $domaindata['bytes_total'] = $SumQuotaInUse['bytes_total'];
           }
           else {
             $domaindata['bytes_total'] = 0;
           }
+
+          // Set the total messages used in the domain
           if (!empty($SumQuotaInUse['msgs_total'])) {
             $domaindata['msgs_total'] = $SumQuotaInUse['msgs_total'];
           }
           else {
             $domaindata['msgs_total'] = 0;
           }
+
           $domaindata['mboxes_in_domain'] = $MailboxDataDomain['count'];
           $domaindata['mboxes_left'] = $row['mailboxes']  - $MailboxDataDomain['count'];
           $domaindata['domain_name'] = $row['domain'];
@@ -4360,8 +4518,11 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
           $domaindata['relay_all_recipients_int'] = $row['relay_all_recipients'];
           $domaindata['relay_unknown_only'] = $row['relay_unknown_only'];
           $domaindata['relay_unknown_only_int'] = $row['relay_unknown_only'];
+          $domaindata['allow_wildcard_aliases'] = $row['allow_wildcard_aliases'];
           $domaindata['created'] = $row['created'];
           $domaindata['modified'] = $row['modified'];
+
+          # Get the number of aliases in the domain (including aliases in subdomains)
           $stmt = $pdo->prepare("SELECT COUNT(`address`) AS `alias_count` FROM `alias`
             WHERE (`domain`= :domain OR `domain` IN (SELECT `alias_domain` FROM `alias_domain` WHERE `target_domain` = :domain2))
               AND `address` NOT IN (
@@ -4374,6 +4535,8 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
           $AliasDataDomain = $stmt->fetch(PDO::FETCH_ASSOC);
           (isset($AliasDataDomain['alias_count'])) ? $domaindata['aliases_in_domain'] = $AliasDataDomain['alias_count'] : $domaindata['aliases_in_domain'] = "0";
           $domaindata['aliases_left'] = $row['aliases'] - $AliasDataDomain['alias_count'];
+
+          # Get the domain administrator(s) (superadmins see all domain admins, domain admins only see themselves)
           if ($_SESSION['mailcow_cc_role'] == "admin")
           {
               $stmt = $pdo->prepare("SELECT GROUP_CONCAT(`username` SEPARATOR ', ') AS domain_admins FROM `domain_admins` WHERE `domain` = :domain");
@@ -4383,6 +4546,8 @@ function mailbox($_action, $_type, $_data = null, $_extra = null) {
               $domain_admins = $stmt->fetch(PDO::FETCH_ASSOC);
               (isset($domain_admins['domain_admins'])) ? $domaindata['domain_admins'] = $domain_admins['domain_admins'] : $domaindata['domain_admins'] = "-";
           }
+
+          # Get the tags assigned to this domain
           $stmt = $pdo->prepare("SELECT `tag_name`
             FROM `tags_domain` WHERE `domain`= :domain");
           $stmt->execute(array(

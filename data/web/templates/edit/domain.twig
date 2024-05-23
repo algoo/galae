@@ -26,6 +26,7 @@
                   <input type="hidden" value="0" name="gal">
                   <input type="hidden" value="0" name="relay_all_recipients">
                   <input type="hidden" value="0" name="relay_unknown_only">
+                  <input type="hidden" value="0" name="allow_wildcard_aliases">
                   <div class="row mb-4">
                     <label class="control-label col-sm-2" for="domain">{{ lang.mailbox.domain }}</label>
                     <div class="col-sm-10">
@@ -118,6 +119,17 @@
                         <br>
                         <p>{{ lang.edit.relay_transport_info|raw }}</p>
                         <hr style="margin:25px 0px 0px 0px">
+                      </div>
+                    </div>
+                  </div>
+                  <div class="row mb-2 mt-2">
+                    <label class="control-label col-sm-2">{{ lang.edit.domain_alias_options }}</label>
+                    <div class="col-sm-10">
+                      <div class="checkbox">
+                        <label><input type="checkbox" value="1" name="allow_wildcard_aliases"{% if result.allow_wildcard_aliases == '1' %} checked{% endif %}> {{ lang.edit.domain_alias_wildcard|raw }}</label>
+                        <br>
+                        <p>{{ lang.edit.domain_alias_wildcard_info|raw }}</p>
+                        <hr>
                       </div>
                     </div>
                   </div>

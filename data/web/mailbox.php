@@ -20,12 +20,20 @@ $allow_admin_email_login = (preg_match("/^([yY][eE][sS]|[yY])+$/", $_ENV["ALLOW_
 
 // domains
 $domains = mailbox('get', 'domains');
-
 // mailboxes
 $mailboxes = [];
+// domains that allow wildcard aliases
+$wildcard_domains = [];
+
 foreach ($domains as $domain) {
+  // get mailboxes from all domains
   foreach (mailbox('get', 'mailboxes', $domain) as $mailbox) {
     $mailboxes[] = $mailbox;
+  }
+
+  // get wildcard domains
+  if (mailbox('get', 'domain_details', $domain)['allow_wildcard_aliases'] == '1') {
+    $wildcard_domains[] = $domain;
   }
 }
 
@@ -38,6 +46,7 @@ $template_data = [
   'allow_admin_email_login' => $allow_admin_email_login,
   'global_filters' => mailbox('get', 'global_filter_details'),
   'domains' => $domains,
+  'wildcard_domains' => $wildcard_domains,
   'mailboxes' => $mailboxes,
   'lang_mailbox' => json_encode($lang['mailbox']),
   'lang_rl' => json_encode($lang['ratelimit']),
