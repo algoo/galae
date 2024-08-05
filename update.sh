@@ -32,51 +32,44 @@ prefetch_images() {
 }
 
 docker_garbage() {
+  SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
   IMGS_TO_DELETE=()
-  for container in $(grep -oP "image: \Kmailcow.+" "${SCRIPT_DIR}/docker-compose.yml"); do
-    REPOSITORY=${container/:*}
-    TAG=${container/*:}
-    V_MAIN=${container/*.}
-    V_SUB=${container/*.}
-    EXISTING_TAGS=$(docker images | grep ${REPOSITORY} | awk '{ print $2 }')
-    for existing_tag in ${EXISTING_TAGS[@]}; do
-      V_MAIN_EXISTING=${existing_tag/*.}
-      V_SUB_EXISTING=${existing_tag/*.}
-      # Not an integer
-      [[ ! $V_MAIN_EXISTING =~ ^[0-9]+$ ]] && continue
-      [[ ! $V_SUB_EXISTING =~ ^[0-9]+$ ]] && continue
 
-      if [[ $V_MAIN_EXISTING == "latest" ]]; then
-        echo "Found deprecated label \"latest\" for repository $REPOSITORY, it should be deleted."
-        IMGS_TO_DELETE+=($REPOSITORY:$existing_tag)
-      elif [[ $V_MAIN_EXISTING -lt $V_MAIN ]]; then
-        echo "Found tag $existing_tag for $REPOSITORY, which is older than the current tag $TAG and should be deleted."
-        IMGS_TO_DELETE+=($REPOSITORY:$existing_tag)
-      elif [[ $V_SUB_EXISTING -lt $V_SUB ]]; then
-        echo "Found tag $existing_tag for $REPOSITORY, which is older than the current tag $TAG and should be deleted."
-        IMGS_TO_DELETE+=($REPOSITORY:$existing_tag)
+  declare -A IMAGES_INFO
+  COMPOSE_IMAGES=($(grep -oP "image: \Kmailcow.+" "${SCRIPT_DIR}/docker-compose.yml"))
+
+  for existing_image in $(docker images --format "{{.ID}}:{{.Repository}}:{{.Tag}}" | grep 'mailcow/'); do
+      ID=$(echo $existing_image | cut -d ':' -f 1)
+      REPOSITORY=$(echo $existing_image | cut -d ':' -f 2)
+      TAG=$(echo $existing_image | cut -d ':' -f 3)
+
+      if [[ " ${COMPOSE_IMAGES[@]} " =~ " ${REPOSITORY}:${TAG} " ]]; then
+          continue
+      else
+          IMGS_TO_DELETE+=("$ID")
+          IMAGES_INFO["$ID"]="$REPOSITORY:$TAG"
       fi
-    done
   done
 
   if [[ ! -z ${IMGS_TO_DELETE[*]} ]]; then
-    echo "Run the following command to delete unused image tags:"
-    echo
-    echo "    docker rmi ${IMGS_TO_DELETE[*]}"
-    echo
-    if [ ! $FORCE ]; then
-      read -r -p "Do you want to delete old image tags right now? [y/N] " response
-      if [[ "$response" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
-        docker rmi ${IMGS_TO_DELETE[*]}
+      echo "The following unused mailcow images were found:"
+      for id in "${IMGS_TO_DELETE[@]}"; do
+          echo "    ${IMAGES_INFO[$id]} ($id)"
+      done
+
+      if [ ! $FORCE ]; then
+          read -r -p "Do you want to delete them to free up some space? [y/N] " response
+          if [[ "$response" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
+              docker rmi ${IMGS_TO_DELETE[*]}
+          else
+              echo "OK, skipped."
+          fi
       else
-        echo "OK, skipped."
+          echo "Running in forced mode! Force removing old mailcow images..."
+          docker rmi ${IMGS_TO_DELETE[*]}
       fi
-    else
-      echo "Running image removal without extra confirmation due to force mode."
-      docker rmi ${IMGS_TO_DELETE[*]}
-    fi
-    echo -e "\e[32mFurther cleanup...\e[0m"
-    echo "If you want to cleanup further garbage collected by Docker, please make sure all containers are up and running before cleaning your system by executing \"docker system prune\""
+      echo -e "\e[32mFurther cleanup...\e[0m"
+      echo "If you want to cleanup further garbage collected by Docker, please make sure all containers are up and running before cleaning your system by executing \"docker system prune\""
   fi
 }
 
@@ -123,11 +116,11 @@ migrate_docker_nat() {
       echo "Working on IPv6 NAT, please wait..."
       echo ${NAT_CONFIG} > /etc/docker/daemon.json
       ip6tables -F -t nat
-      [[ -e /etc/alpine-release ]] && rc-service docker restart || systemctl restart docker.service
+      [[ -e /etc/rc.conf ]] && rc-service docker restart || systemctl restart docker.service
       if [[ $? -ne 0 ]]; then
         echo -e "\e[31mError:\e[0m Failed to activate IPv6 NAT! Reverting and exiting."
         rm /etc/docker/daemon.json
-        if [[ -e /etc/alpine-release ]]; then
+        if [[ -e /etc/rc.conf ]]; then
           rc-service docker restart
         else
           systemctl reset-failed docker.service
@@ -178,17 +171,17 @@ remove_obsolete_nginx_ports() {
 detect_docker_compose_command(){
 if ! [[ "${DOCKER_COMPOSE_VERSION}" =~ ^(native|standalone)$ ]]; then
   if docker compose > /dev/null 2>&1; then
-      if docker compose version --short | grep "2." > /dev/null 2>&1; then
+      if docker compose version --short | grep -e "^2." -e "^v2." > /dev/null 2>&1; then
         DOCKER_COMPOSE_VERSION=native
         COMPOSE_COMMAND="docker compose"
-        echo -e "\e[31mFound Docker Compose Plugin (native).\e[0m"
-        echo -e "\e[31mSetting the DOCKER_COMPOSE_VERSION Variable to native\e[0m"
+        echo -e "\e[33mFound Docker Compose Plugin (native).\e[0m"
+        echo -e "\e[33mSetting the DOCKER_COMPOSE_VERSION Variable to native\e[0m"
         sed -i 's/^DOCKER_COMPOSE_VERSION=.*/DOCKER_COMPOSE_VERSION=native/' $SCRIPT_DIR/mailcow.conf 
         sleep 2
         echo -e "\e[33mNotice: You'll have to update this Compose Version via your Package Manager manually!\e[0m"
       else
         echo -e "\e[31mCannot find Docker Compose with a Version Higher than 2.X.X.\e[0m" 
-        echo -e "\e[31mPlease update/install it manually regarding to this doc site: https://docs.mailcow.email/i_u_m/i_u_m_install/\e[0m"
+        echo -e "\e[31mPlease update/install it manually regarding to this doc site: https://docs.mailcow.email/install/\e[0m"
         exit 1
       fi
   elif docker-compose > /dev/null 2>&1; then
@@ -196,21 +189,21 @@ if ! [[ "${DOCKER_COMPOSE_VERSION}" =~ ^(native|standalone)$ ]]; then
       if docker-compose version --short | grep "^2." > /dev/null 2>&1; then
         DOCKER_COMPOSE_VERSION=standalone
         COMPOSE_COMMAND="docker-compose"
-        echo -e "\e[31mFound Docker Compose Standalone.\e[0m"
-        echo -e "\e[31mSetting the DOCKER_COMPOSE_VERSION Variable to standalone\e[0m"
+        echo -e "\e[33mFound Docker Compose Standalone.\e[0m"
+        echo -e "\e[33mSetting the DOCKER_COMPOSE_VERSION Variable to standalone\e[0m"
         sed -i 's/^DOCKER_COMPOSE_VERSION=.*/DOCKER_COMPOSE_VERSION=standalone/' $SCRIPT_DIR/mailcow.conf
         sleep 2
         echo -e "\e[33mNotice: For an automatic update of docker-compose please use the update_compose.sh scripts located at the helper-scripts folder.\e[0m"
       else
         echo -e "\e[31mCannot find Docker Compose with a Version Higher than 2.X.X.\e[0m" 
-        echo -e "\e[31mPlease update/install regarding to this doc site: https://docs.mailcow.email/i_u_m/i_u_m_install/\e[0m"
+        echo -e "\e[31mPlease update/install regarding to this doc site: https://docs.mailcow.email/install/\e[0m"
         exit 1
       fi
     fi
 
   else
     echo -e "\e[31mCannot find Docker Compose.\e[0m" 
-    echo -e "\e[31mPlease install it regarding to this doc site: https://docs.mailcow.email/i_u_m/i_u_m_install/\e[0m"
+    echo -e "\e[31mPlease install it regarding to this doc site: https://docs.mailcow.email/install/\e[0m"
     exit 1
   fi
 
@@ -223,7 +216,7 @@ elif [ "${DOCKER_COMPOSE_VERSION}" == "native" ]; then
     if ! $COMPOSE_COMMAND > /dev/null 2>&1 || ! $COMPOSE_COMMAND --version | grep "^2." > /dev/null 2>&1; then
       # IF it cannot find Standalone in > 2.X, then script stops
       echo -e "\e[31mCannot find Docker Compose or the Version is lower then 2.X.X.\e[0m" 
-      echo -e "\e[31mPlease install it regarding to this doc site: https://docs.mailcow.email/i_u_m/i_u_m_install/\e[0m"
+      echo -e "\e[31mPlease install it regarding to this doc site: https://docs.mailcow.email/install/\e[0m"
       exit 1
     fi
       # If it finds the standalone Plugin it will use this instead and change the mailcow.conf Variable accordingly
@@ -243,7 +236,7 @@ elif [ "${DOCKER_COMPOSE_VERSION}" == "standalone" ]; then
     if ! $COMPOSE_COMMAND > /dev/null 2>&1; then
       # IF it cannot find Native in > 2.X, then script stops
       echo -e "\e[31mCannot find Docker Compose.\e[0m" 
-      echo -e "\e[31mPlease install it regarding to this doc site: https://docs.mailcow.email/i_u_m/i_u_m_install/\e[0m"
+      echo -e "\e[31mPlease install it regarding to this doc site: https://docs.mailcow.email/install/\e[0m"
       exit 1
     fi
       # If it finds the native Plugin it will use this instead and change the mailcow.conf Variable accordingly
@@ -418,10 +411,24 @@ detect_docker_compose_command
 
 [[ ! -f mailcow.conf ]] && { echo "mailcow.conf is missing! Is mailcow installed?"; exit 1;}
 DOTS=${MAILCOW_HOSTNAME//[^.]};
-if [ ${#DOTS} -lt 2 ]; then
-  echo "MAILCOW_HOSTNAME (${MAILCOW_HOSTNAME}) is not a FQDN!"
-  echo "Please change it to a FQDN and run $COMPOSE_COMMAND down followed by $COMPOSE_COMMAND up -d"
+if [ ${#DOTS} -lt 1 ]; then
+  echo -e "\e[31mMAILCOW_HOSTNAME (${MAILCOW_HOSTNAME}) is not a FQDN!\e[0m"
+  sleep 1
+  echo "Please change it to a FQDN and redeploy the stack with $COMPOSE_COMMAND up -d"
   exit 1
+elif [[ "${MAILCOW_HOSTNAME: -1}" == "." ]]; then
+  echo "MAILCOW_HOSTNAME (${MAILCOW_HOSTNAME}) is ending with a dot. This is not a valid FQDN!"
+  exit 1
+elif [ ${#DOTS} -eq 1 ]; then
+  echo -e "\e[33mMAILCOW_HOSTNAME (${MAILCOW_HOSTNAME}) does not contain a Subdomain. This is not fully tested and may cause issues.\e[0m"
+  echo "Find more information about why this message exists here: https://github.com/mailcow/mailcow-dockerized/issues/1572"
+  read -r -p "Do you want to proceed anyway? [y/N] " response
+  if [[ "$response" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
+    echo "OK. Procceding."
+  else
+    echo "OK. Exiting."
+    exit 1
+  fi
 fi
 
 if grep --help 2>&1 | head -n 1 | grep -q -i "busybox"; then echo "BusyBox grep detected, please install gnu grep, \"apk add --no-cache --upgrade grep\""; exit 1; fi
@@ -434,7 +441,10 @@ CONFIG_ARRAY=(
   "SKIP_SOGO"
   "USE_WATCHDOG"
   "WATCHDOG_NOTIFY_EMAIL"
+  "WATCHDOG_NOTIFY_WEBHOOK"
+  "WATCHDOG_NOTIFY_WEBHOOK_BODY"
   "WATCHDOG_NOTIFY_BAN"
+  "WATCHDOG_NOTIFY_START"
   "WATCHDOG_EXTERNAL_CHECKS"
   "WATCHDOG_SUBJECT"
   "SKIP_CLAMD"
@@ -470,6 +480,8 @@ CONFIG_ARRAY=(
   "WATCHDOG_VERBOSE"
   "WEBAUTHN_ONLY_TRUSTED_VENDORS"
   "SPAMHAUS_DQS_KEY"
+  "SKIP_UNBOUND_HEALTHCHECK"
+  "DISABLE_NETFILTER_ISOLATION_RULE"
 )
 
 detect_bad_asn
@@ -616,11 +628,32 @@ for option in ${CONFIG_ARRAY[@]}; do
       echo "#MAILDIR_SUB=Maildir" >> mailcow.conf
       echo "MAILDIR_SUB=" >> mailcow.conf
     fi
+  elif [[ ${option} == "WATCHDOG_NOTIFY_WEBHOOK" ]]; then
+    if ! grep -q ${option} mailcow.conf; then
+      echo "Adding new option \"${option}\" to mailcow.conf"
+      echo '# Send notifications to a webhook URL that receives a POST request with the content type "application/json".' >> mailcow.conf
+      echo '# You can use this to send notifications to services like Discord, Slack and others.' >> mailcow.conf
+      echo '#WATCHDOG_NOTIFY_WEBHOOK=https://discord.com/api/webhooks/XXXXXXXXXXXXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX' >> mailcow.conf
+    fi
+  elif [[ ${option} == "WATCHDOG_NOTIFY_WEBHOOK_BODY" ]]; then
+    if ! grep -q ${option} mailcow.conf; then
+      echo "Adding new option \"${option}\" to mailcow.conf"
+      echo '# JSON body included in the webhook POST request. Needs to be in single quotes.' >> mailcow.conf
+      echo '# Following variables are available: SUBJECT, BODY' >> mailcow.conf
+      WEBHOOK_BODY='{"username": "mailcow Watchdog", "content": "**${SUBJECT}**\n${BODY}"}'
+      echo "#WATCHDOG_NOTIFY_WEBHOOK_BODY='${WEBHOOK_BODY}'" >> mailcow.conf
+    fi
   elif [[ ${option} == "WATCHDOG_NOTIFY_BAN" ]]; then
     if ! grep -q ${option} mailcow.conf; then
       echo "Adding new option \"${option}\" to mailcow.conf"
       echo '# Notify about banned IP. Includes whois lookup.' >> mailcow.conf
       echo "WATCHDOG_NOTIFY_BAN=y" >> mailcow.conf
+    fi
+  elif [[ ${option} == "WATCHDOG_NOTIFY_START" ]]; then
+    if ! grep -q ${option} mailcow.conf; then
+      echo "Adding new option \"${option}\" to mailcow.conf"
+      echo '# Send a notification when the watchdog is started.' >> mailcow.conf
+      echo "WATCHDOG_NOTIFY_START=y" >> mailcow.conf
     fi
   elif [[ ${option} == "WATCHDOG_SUBJECT" ]]; then
     if ! grep -q ${option} mailcow.conf; then
@@ -716,6 +749,19 @@ for option in ${CONFIG_ARRAY[@]}; do
       echo '# Enable watchdog verbose logging' >> mailcow.conf
       echo 'WATCHDOG_VERBOSE=n' >> mailcow.conf
     fi
+  elif [[ ${option} == "SKIP_UNBOUND_HEALTHCHECK" ]]; then
+    if ! grep -q ${option} mailcow.conf; then
+      echo "Adding new option \"${option}\" to mailcow.conf"
+      echo '# Skip Unbound (DNS Resolver) Healthchecks (NOT Recommended!) - y/n' >> mailcow.conf
+      echo 'SKIP_UNBOUND_HEALTHCHECK=n' >> mailcow.conf
+    fi
+  elif [[ ${option} == "DISABLE_NETFILTER_ISOLATION_RULE" ]]; then
+    if ! grep -q ${option} mailcow.conf; then
+      echo "Adding new option \"${option}\" to mailcow.conf"
+      echo '# Prevent netfilter from setting an iptables/nftables rule to isolate the mailcow docker network - y/n' >> mailcow.conf
+      echo '# CAUTION: Disabling this may expose container ports to other neighbors on the same subnet, even if the ports are bound to localhost' >> mailcow.conf
+      echo 'DISABLE_NETFILTER_ISOLATION_RULE=n' >> mailcow.conf
+    fi 
   elif ! grep -q ${option} mailcow.conf; then
     echo "Adding new option \"${option}\" to mailcow.conf"
     echo "${option}=n" >> mailcow.conf
@@ -874,36 +920,59 @@ done
 
 [[ -f data/conf/nginx/ZZZ-ejabberd.conf ]] && rm data/conf/nginx/ZZZ-ejabberd.conf
 
+
 # Silently fixing remote url from andryyy to mailcow
-git remote set-url origin https://github.com/mailcow/mailcow-dockerized
-echo -e "\e[32mCommitting current status...\e[0m"
-[[ -z "$(git config user.name)" ]] && git config user.name moo
-[[ -z "$(git config user.email)" ]] && git config user.email moo@cow.moo
-[[ ! -z $(git ls-files data/conf/rspamd/override.d/worker-controller-password.inc) ]] && git rm data/conf/rspamd/override.d/worker-controller-password.inc
-git add -u
-git commit -am "Before update on ${DATE}" > /dev/null
-echo -e "\e[32mFetching updated code from remote...\e[0m"
-git fetch origin #${BRANCH}
-echo -e "\e[32mMerging local with remote code (recursive, strategy: \"${MERGE_STRATEGY:-theirs}\", options: \"patience\"...\e[0m"
-git config merge.defaultToUpstream true
-git merge -X${MERGE_STRATEGY:-theirs} -Xpatience -m "After update on ${DATE}"
-# Need to use a variable to not pass return codes of if checks
-MERGE_RETURN=$?
-if [[ ${MERGE_RETURN} == 128 ]]; then
-  echo -e "\e[31m\nOh no, what happened?\n=> You most likely added files to your local mailcow instance that were now added to the official mailcow repository. Please move them to another location before updating mailcow.\e[0m"
-  exit 1
-elif [[ ${MERGE_RETURN} == 1 ]]; then
-  echo -e "\e[93mPotenial conflict, trying to fix...\e[0m"
-  git status --porcelain | grep -E "UD|DU" | awk '{print $2}' | xargs rm -v
-  git add -A
-  git commit -m "After update on ${DATE}" > /dev/null
-  git checkout .
-  echo -e "\e[32mRemoved and recreated files if necessary.\e[0m"
-elif [[ ${MERGE_RETURN} != 0 ]]; then
-  echo -e "\e[31m\nOh no, something went wrong. Please check the error message above.\e[0m"
-  echo
-  echo "Run $COMPOSE_COMMAND up -d to restart your stack without updates or try again after fixing the mentioned errors."
-  exit 1
+# git remote set-url origin https://github.com/mailcow/mailcow-dockerized
+
+DEFAULT_REPO=https://github.com/mailcow/mailcow-dockerized
+CURRENT_REPO=$(git config --get remote.origin.url)
+if [ "$CURRENT_REPO" != "$DEFAULT_REPO" ]; then 
+  echo "The Repository currently used is not the default Mailcow Repository."
+  echo "Currently Repository: $CURRENT_REPO"
+  echo "Default Repository:   $DEFAULT_REPO"
+  if [ ! $FORCE ]; then
+    read -r -p "Should it be changed back to default? [y/N] " repo_response
+    if [[ "$repo_response" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
+      git remote set-url origin $DEFAULT_REPO
+    fi
+  else
+      echo "Running in forced mode... setting Repo to default!"
+      git remote set-url origin $DEFAULT_REPO
+  fi
+fi
+
+if [ ! $DEV ]; then
+  echo -e "\e[32mCommitting current status...\e[0m"
+  [[ -z "$(git config user.name)" ]] && git config user.name moo
+  [[ -z "$(git config user.email)" ]] && git config user.email moo@cow.moo
+  [[ ! -z $(git ls-files data/conf/rspamd/override.d/worker-controller-password.inc) ]] && git rm data/conf/rspamd/override.d/worker-controller-password.inc
+  git add -u
+  git commit -am "Before update on ${DATE}" > /dev/null
+  echo -e "\e[32mFetching updated code from remote...\e[0m"
+  git fetch origin #${BRANCH}
+  echo -e "\e[32mMerging local with remote code (recursive, strategy: \"${MERGE_STRATEGY:-theirs}\", options: \"patience\"...\e[0m"
+  git config merge.defaultToUpstream true
+  git merge -X${MERGE_STRATEGY:-theirs} -Xpatience -m "After update on ${DATE}"
+  # Need to use a variable to not pass return codes of if checks
+  MERGE_RETURN=$?
+  if [[ ${MERGE_RETURN} == 128 ]]; then
+    echo -e "\e[31m\nOh no, what happened?\n=> You most likely added files to your local mailcow instance that were now added to the official mailcow repository. Please move them to another location before updating mailcow.\e[0m"
+    exit 1
+  elif [[ ${MERGE_RETURN} == 1 ]]; then
+    echo -e "\e[93mPotenial conflict, trying to fix...\e[0m"
+    git status --porcelain | grep -E "UD|DU" | awk '{print $2}' | xargs rm -v
+    git add -A
+    git commit -m "After update on ${DATE}" > /dev/null
+    git checkout .
+    echo -e "\e[32mRemoved and recreated files if necessary.\e[0m"
+  elif [[ ${MERGE_RETURN} != 0 ]]; then
+    echo -e "\e[31m\nOh no, something went wrong. Please check the error message above.\e[0m"
+    echo
+    echo "Run $COMPOSE_COMMAND up -d to restart your stack without updates or try again after fixing the mentioned errors."
+    exit 1
+  fi
+elif [ $DEV ]; then
+  echo -e "\e[33mDEVELOPER MODE: Not creating a git diff and commiting it to prevent development stuff within a backup diff...\e[0m"
 fi
 
 echo -e "\e[32mFetching new images, if any...\e[0m"

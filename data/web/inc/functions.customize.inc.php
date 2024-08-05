@@ -2,6 +2,7 @@
 function customize($_action, $_item, $_data = null) {
 	global $redis;
 	global $lang;
+  global $LOGO_LIMITS;
   
   switch ($_action) {
     case 'add':
@@ -24,9 +25,10 @@ function customize($_action, $_item, $_data = null) {
       }
       switch ($_item) {
         case 'main_logo':
-          if (in_array($_data['main_logo']['type'], array('image/gif', 'image/jpeg', 'image/pjpeg', 'image/x-png', 'image/png', 'image/svg+xml'))) {
+        case 'main_logo_dark':
+          if (in_array($_data[$_item]['type'], array('image/gif', 'image/jpeg', 'image/pjpeg', 'image/x-png', 'image/png', 'image/svg+xml'))) {
             try {
-              if (file_exists($_data['main_logo']['tmp_name']) !== true) {
+              if (file_exists($_data[$_item]['tmp_name']) !== true) {
                 $_SESSION['return'][] = array(
                   'type' => 'danger',
                   'log' => array(__FUNCTION__, $_action, $_item, $_data),
@@ -34,7 +36,24 @@ function customize($_action, $_item, $_data = null) {
                 );
                 return false;
               }
-              $image = new Imagick($_data['main_logo']['tmp_name']);
+              if ($_data[$_item]['size'] > $LOGO_LIMITS['max_size']) {
+                $_SESSION['return'][] = array(
+                  'type' => 'danger',
+                  'log' => array(__FUNCTION__, $_action, $_item, $_data),
+                  'msg' => 'img_size_exceeded'
+                );
+                return false;
+              }
+              list($width, $height) = getimagesize($_data[$_item]['tmp_name']);
+              if ($width > $LOGO_LIMITS['max_width'] || $height > $LOGO_LIMITS['max_height']) {
+                $_SESSION['return'][] = array(
+                  'type' => 'danger',
+                  'log' => array(__FUNCTION__, $_action, $_item, $_data),
+                  'msg' => 'img_dimensions_exceeded'
+                );
+                return false;
+              }
+              $image = new Imagick($_data[$_item]['tmp_name']);
               if ($image->valid() !== true) {
                 $_SESSION['return'][] = array(
                   'type' => 'danger',
@@ -63,7 +82,7 @@ function customize($_action, $_item, $_data = null) {
             return false;
           }
           try {
-            $redis->Set('MAIN_LOGO', 'data:' . $_data['main_logo']['type'] . ';base64,' . base64_encode(file_get_contents($_data['main_logo']['tmp_name'])));
+            $redis->Set(strtoupper($_item), 'data:' . $_data[$_item]['type'] . ';base64,' . base64_encode(file_get_contents($_data[$_item]['tmp_name'])));
           }
           catch (RedisException $e) {
             $_SESSION['return'][] = array(
@@ -201,8 +220,9 @@ function customize($_action, $_item, $_data = null) {
       }
       switch ($_item) {
         case 'main_logo':
+        case 'main_logo_dark':
           try {
-            if ($redis->del('MAIN_LOGO')) {
+            if ($redis->del(strtoupper($_item))) {
               $_SESSION['return'][] = array(
                 'type' => 'success',
                 'log' => array(__FUNCTION__, $_action, $_item, $_data),
@@ -239,8 +259,9 @@ function customize($_action, $_item, $_data = null) {
           return ($app_links) ? $app_links : false;
         break;
         case 'main_logo':
+        case 'main_logo_dark':
           try {
-            return $redis->get('MAIN_LOGO');
+            return $redis->get(strtoupper($_item));
           }
           catch (RedisException $e) {
             $_SESSION['return'][] = array(
@@ -277,9 +298,14 @@ function customize($_action, $_item, $_data = null) {
           }
         break;
         case 'main_logo_specs':
+        case 'main_logo_dark_specs':
           try {
             $image = new Imagick();
-            $img_data = explode('base64,', customize('get', 'main_logo'));
+            if($_item == 'main_logo_specs') {
+              $img_data = explode('base64,', customize('get', 'main_logo'));
+            } else {
+              $img_data = explode('base64,', customize('get', 'main_logo_dark'));
+            }
             if ($img_data[1]) {
               $image->readImageBlob(base64_decode($img_data[1]));
               return $image->identifyImage();

@@ -2,9 +2,10 @@ version: '2.1'
 services:
 
     unbound-mailcow:
-      image: mailcow/unbound:1.17
+      image: mailcow/unbound:1.21
       environment:
         - TZ=${TZ}
+        - SKIP_UNBOUND_HEALTHCHECK=${SKIP_UNBOUND_HEALTHCHECK:-n}
       volumes:
         - ./data/hooks/unbound:/hooks:Z
         - ./data/conf/unbound/unbound.conf:/etc/unbound/unbound.conf:ro,Z
@@ -20,6 +21,7 @@ services:
       image: mariadb:10.5
       depends_on:
         - unbound-mailcow
+        - netfilter-mailcow
       stop_grace_period: 45s
       volumes:
         - mysql-vol-1:/var/lib/mysql/
@@ -45,6 +47,8 @@ services:
       volumes:
         - redis-vol-1:/data/
       restart: always
+      depends_on:
+        - netfilter-mailcow
       ports:
         - "${REDIS_PORT:-127.0.0.1:7654}:6379"
       environment:
@@ -58,10 +62,11 @@ services:
             - redis
 
     clamd-mailcow:
-      image: mailcow/clamd:1.61
+      image: mailcow/clamd:1.65
       restart: always
       depends_on:
-        - unbound-mailcow
+        unbound-mailcow:
+          condition: service_healthy
       dns:
         - ${IPV4_NETWORK:-172.22.1}.254
       environment:
@@ -76,7 +81,7 @@ services:
             - clamd
 
     rspamd-mailcow:
-      image: mailcow/rspamd:1.92
+      image: mailcow/rspamd:1.95
       stop_grace_period: 30s
       depends_on:
         - dovecot-mailcow
@@ -106,7 +111,7 @@ services:
             - rspamd
 
     php-fpm-mailcow:
-      image: mailcow/phpfpm:1.84
+      image: mailcow/phpfpm:1.87
       command: "php-fpm -d date.timezone=${TZ} -d expose_php=0"
       depends_on:
         - redis-mailcow
@@ -170,7 +175,7 @@ services:
             - phpfpm
 
     sogo-mailcow:
-      image: mailcow/sogo:1.118
+      image: mailcow/sogo:1.123
       environment:
         - DBNAME=${DBNAME}
         - DBUSER=${DBUSER}
@@ -202,7 +207,7 @@ services:
       labels:
         ofelia.enabled: "true"
         ofelia.job-exec.sogo_sessions.schedule: "@every 1m"
-        ofelia.job-exec.sogo_sessions.command: "/bin/bash -c \"[[ $${MASTER} == y ]] && /usr/local/bin/gosu sogo /usr/sbin/sogo-tool expire-sessions $${SOGO_EXPIRE_SESSION} || exit 0\""
+        ofelia.job-exec.sogo_sessions.command: "/bin/bash -c \"[[ $${MASTER} == y ]] && /usr/local/bin/gosu sogo /usr/sbin/sogo-tool -v expire-sessions $${SOGO_EXPIRE_SESSION} || exit 0\""
         ofelia.job-exec.sogo_ealarms.schedule: "@every 1m"
         ofelia.job-exec.sogo_ealarms.command: "/bin/bash -c \"[[ $${MASTER} == y ]] && /usr/local/bin/gosu sogo /usr/sbin/sogo-ealarms-notify -p /etc/sogo/sieve.creds || exit 0\""
         ofelia.job-exec.sogo_eautoreply.schedule: "@every 5m"
@@ -217,9 +222,10 @@ services:
             - sogo
 
     dovecot-mailcow:
-      image: mailcow/dovecot:1.24
+      image: mailcow/dovecot:1.28.2
       depends_on:
         - mysql-mailcow
+        - netfilter-mailcow
       dns:
         - ${IPV4_NETWORK:-172.22.1}.254
       cap_add:
@@ -240,6 +246,8 @@ services:
       environment:
         - DOVECOT_MASTER_USER=${DOVECOT_MASTER_USER:-}
         - DOVECOT_MASTER_PASS=${DOVECOT_MASTER_PASS:-}
+        - MAILCOW_REPLICA_IP=${MAILCOW_REPLICA_IP:-}
+        - DOVEADM_REPLICA_PORT=${DOVEADM_REPLICA_PORT:-}
         - LOG_LINES=${LOG_LINES:-9999}
         - DBNAME=${DBNAME}
         - DBUSER=${DBUSER}
@@ -297,9 +305,12 @@ services:
             - dovecot
 
     postfix-mailcow:
-      image: mailcow/postfix:1.71
+      image: mailcow/postfix:1.74
       depends_on:
-        - mysql-mailcow
+        mysql-mailcow:
+          condition: service_started
+        unbound-mailcow:
+          condition: service_healthy
       volumes:
         - ./data/hooks/postfix:/hooks:Z
         - ./data/conf/postfix:/opt/postfix/conf:z
@@ -390,8 +401,11 @@ services:
 
     acme-mailcow:
       depends_on:
-        - nginx-mailcow
-      image: mailcow/acme:1.84
+        nginx-mailcow:
+          condition: service_started
+        unbound-mailcow:
+          condition: service_healthy
+      image: mailcow/acme:1.87
       dns:
         - ${IPV4_NETWORK:-172.22.1}.254
       environment:
@@ -427,14 +441,8 @@ services:
             - acme
 
     netfilter-mailcow:
-      image: mailcow/netfilter:1.52
+      image: mailcow/netfilter:1.58
       stop_grace_period: 30s
-      depends_on:
-        - dovecot-mailcow
-        - postfix-mailcow
-        - sogo-mailcow
-        - php-fpm-mailcow
-        - redis-mailcow
       restart: always
       privileged: true
       environment:
@@ -445,12 +453,14 @@ services:
         - SNAT6_TO_SOURCE=${SNAT6_TO_SOURCE:-n}
         - REDIS_SLAVEOF_IP=${REDIS_SLAVEOF_IP:-}
         - REDIS_SLAVEOF_PORT=${REDIS_SLAVEOF_PORT:-}
+        - MAILCOW_REPLICA_IP=${MAILCOW_REPLICA_IP:-}
+        - DISABLE_NETFILTER_ISOLATION_RULE=${DISABLE_NETFILTER_ISOLATION_RULE:-n}
       network_mode: "host"
       volumes:
         - /lib/modules:/lib/modules:ro
 
     watchdog-mailcow:
-      image: mailcow/watchdog:1.97
+      image: mailcow/watchdog:2.02
       dns:
         - ${IPV4_NETWORK:-172.22.1}.254
       tmpfs:
@@ -461,6 +471,13 @@ services:
         - postfix-vol-1:/var/spool/postfix
         - ./data/assets/ssl:/etc/ssl/mail/:ro,z
       restart: always
+      depends_on:
+        - postfix-mailcow
+        - dovecot-mailcow
+        - mysql-mailcow
+        - acme-mailcow
+        - redis-mailcow
+
       environment:
         - IPV6_NETWORK=${IPV6_NETWORK:-fd4d:6169:6c63:6f77::/64}
         - LOG_LINES=${LOG_LINES:-9999}
@@ -472,7 +489,10 @@ services:
         - USE_WATCHDOG=${USE_WATCHDOG:-n}
         - WATCHDOG_NOTIFY_EMAIL=${WATCHDOG_NOTIFY_EMAIL:-}
         - WATCHDOG_NOTIFY_BAN=${WATCHDOG_NOTIFY_BAN:-y}
+        - WATCHDOG_NOTIFY_START=${WATCHDOG_NOTIFY_START:-y}
         - WATCHDOG_SUBJECT=${WATCHDOG_SUBJECT:-Watchdog ALERT}
+        - WATCHDOG_NOTIFY_WEBHOOK=${WATCHDOG_NOTIFY_WEBHOOK:-}
+        - WATCHDOG_NOTIFY_WEBHOOK_BODY=${WATCHDOG_NOTIFY_WEBHOOK_BODY:-}
         - WATCHDOG_EXTERNAL_CHECKS=${WATCHDOG_EXTERNAL_CHECKS:-n}
         - WATCHDOG_MYSQL_REPLICATION_CHECKS=${WATCHDOG_MYSQL_REPLICATION_CHECKS:-n}
         - WATCHDOG_VERBOSE=${WATCHDOG_VERBOSE:-n}
@@ -512,7 +532,7 @@ services:
             - watchdog
 
     dockerapi-mailcow:
-      image: mailcow/dockerapi:2.05
+      image: mailcow/dockerapi:2.07
       security_opt:
         - label=disable
       restart: always
@@ -530,9 +550,13 @@ services:
           aliases:
             - dockerapi
 
+    
+    ##### Will be removed soon #####
     solr-mailcow:
-      image: mailcow/solr:1.8.1
+      image: mailcow/solr:1.8.2
       restart: always
+      depends_on:
+        - netfilter-mailcow
       volumes:
         - solr-vol-1:/opt/solr/server/solr/dovecot-fts/data
       ports:
@@ -545,9 +569,10 @@ services:
         mailcow-network:
           aliases:
             - solr
+    ################################
 
     olefy-mailcow:
-      image: mailcow/olefy:1.11
+      image: mailcow/olefy:1.12
       restart: always
       environment:
         - TZ=${TZ}

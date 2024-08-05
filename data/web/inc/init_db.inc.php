@@ -3,7 +3,7 @@ function init_db_schema() {
   try {
     global $pdo;
 
-    $db_version = "14022023_1000";
+    $db_version = "26022024_1433";
 
     $stmt = $pdo->query("SHOW TABLES LIKE 'versions'");
     $num_results = count($stmt->fetchAll(PDO::FETCH_ASSOC));
@@ -269,6 +269,22 @@ function init_db_schema() {
         ),
         "attr" => "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
       ),
+      "domain_wide_footer" => array(
+        "cols" => array(
+          "domain" => "VARCHAR(255) NOT NULL",
+          "html" => "LONGTEXT",
+          "plain" => "LONGTEXT",
+          "mbox_exclude" => "JSON NOT NULL DEFAULT ('[]')",
+          "alias_domain_exclude" => "JSON NOT NULL DEFAULT ('[]')",
+          "skip_replies" => "TINYINT(1) NOT NULL DEFAULT '0'"
+        ),
+        "keys" => array(
+          "primary" => array(
+            "" => array("domain")
+          )
+        ),
+        "attr" => "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
+      ),
       "tags_domain" => array(
         "cols" => array(
           "tag_name" => "VARCHAR(255) NOT NULL",
@@ -346,6 +362,7 @@ function init_db_schema() {
           "local_part" => "VARCHAR(255) NOT NULL",
           "domain" => "VARCHAR(255) NOT NULL",
           "attributes" => "JSON",
+          "custom_attributes" => "JSON NOT NULL DEFAULT ('{}')",
           "kind" => "VARCHAR(100) NOT NULL DEFAULT ''",
           "multiple_bookings" => "INT NOT NULL DEFAULT -1",
           "created" => "DATETIME(0) NOT NULL DEFAULT NOW(0)",
@@ -706,6 +723,7 @@ function init_db_schema() {
           "timeout1" => "SMALLINT NOT NULL DEFAULT '600'",
           "timeout2" => "SMALLINT NOT NULL DEFAULT '600'",
           "subscribeall" => "TINYINT(1) NOT NULL DEFAULT '1'",
+          "dry" => "TINYINT(1) NOT NULL DEFAULT '0'",
           "is_running" => "TINYINT(1) NOT NULL DEFAULT '0'",
           "returned_text" => "LONGTEXT",
           "last_run" => "TIMESTAMP NULL DEFAULT NULL",
@@ -963,6 +981,18 @@ function init_db_schema() {
         ),
         "attr" => "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
       ),
+      "sogo_admin" => array(
+        "cols" => array(
+          "c_key" => "VARCHAR(255) NOT NULL DEFAULT ''",
+          "c_content"  => "mediumtext NOT NULL",
+        ),
+        "keys" => array(
+          "primary" => array(
+            "" => array("c_key")
+          )
+        ),
+        "attr" => "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
+      ),      
       "pushover" => array(
         "cols" => array(
           "username" => "VARCHAR(255) NOT NULL",

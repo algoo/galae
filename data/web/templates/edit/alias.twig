@@ -45,16 +45,16 @@
       <div class="checkbox">
         <label><input class="goto_checkbox" type="checkbox" value="1" name="goto_null"{% if result.goto == 'null@localhost' %} checked{% endif %}> {{ lang.add.goto_null }}</label>
       </div>
-      <div class="checkbox">
-        <label><input class="goto_checkbox" type="checkbox" value="1" name="goto_spam"{% if result.goto == 'spam@localhost' %} checked{% endif %}> {{ lang.add.goto_spam|raw }}</label>
+      <div class="form-check">
+        <label><input class="form-check-input goto_checkbox" type="checkbox" value="1" name="goto_spam"{% if result.goto == 'spam@localhost' %} checked{% endif %}> {{ lang.add.goto_spam|raw }}</label>
       </div>
-      <div class="checkbox">
-        <label><input class="goto_checkbox" type="checkbox" value="1" name="goto_ham"{% if result.goto == 'ham@localhost' %} checked{% endif %}> {{ lang.add.goto_ham|raw }}</label>
+      <div class="form-check">
+        <label><input class="form-check-input goto_checkbox" type="checkbox" value="1" name="goto_ham"{% if result.goto == 'ham@localhost' %} checked{% endif %}> {{ lang.add.goto_ham|raw }}</label>
       </div>
       {% if not skip_sogo and result.is_wildcard != '1' %}
       <hr>
-      <div class="checkbox">
-        <label><input type="checkbox" value="1" name="sogo_visible"{% if result.sogo_visible == '1' %} checked{% endif %}> {{ lang.edit.sogo_visible }}</label>
+      <div class="form-check">
+        <label><input type="checkbox" class="form-check-input" value="1" name="sogo_visible"{% if result.sogo_visible == '1' %} checked{% endif %}> {{ lang.edit.sogo_visible }}</label>
       </div>
       <p class="text-muted">{{ lang.edit.sogo_visible_info }}</p>
       {% endif %}
@@ -76,8 +76,8 @@
   <hr>
   <div class="row mb-2">
     <div class="offset-sm-2 col-sm-10">
-      <div class="checkbox">
-        <label><input type="checkbox" value="1" name="active"{% if result.active == '1' %} checked{% endif %}> {{ lang.edit.active }}</label>
+      <div class="form-check">
+        <label><input type="checkbox" class="form-check-input" value="1" name="active"{% if result.active == '1' %} checked{% endif %}> {{ lang.edit.active }}</label>
       </div>
     </div>
   </div>

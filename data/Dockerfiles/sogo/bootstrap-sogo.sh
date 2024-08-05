@@ -150,6 +150,8 @@ cat <<EOF > /var/lib/sogo/GNUstep/Defaults/sogod.plist
     <string>YES</string>
     <key>SOGoEncryptionKey</key>
     <string>${RAND_PASS}</string>
+    <key>OCSAdminURL</key>
+    <string>mysql://${DBUSER}:${DBPASS}@${DBHOST}:${DBPORT}/${DBNAME}/sogo_admin</string>
     <key>OCSCacheFolderURL</key>
     <string>mysql://${DBUSER}:${DBPASS}@${DBHOST}:${DBPORT}/${DBNAME}/sogo_cache_folder</string>
     <key>OCSEMailAlarmsFolderURL</key>

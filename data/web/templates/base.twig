@@ -31,7 +31,10 @@
 {% block navbar %}
 <nav class="navbar navbar-expand-lg navbar-light bg-light navbar-fixed-top p-0">
   <div class="container-fluid">
-    <a class="navbar-brand" href="/"><img alt="mailcow-logo" src="{{ logo|default('/img/cow_mailcow.svg') }}"></a>
+    <a class="navbar-brand" href="/">
+      <img class="main-logo" alt="mailcow-logo" src="{{ logo|default('/img/cow_mailcow.svg') }}">
+      <img class="main-logo-dark" alt="mailcow-logo-dark" src="{{ logo_dark|default('/img/cow_mailcow.svg') }}">
+    </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
       <i class="bi bi-list fs-3"></i>
     </button>
@@ -111,7 +114,9 @@
         <li class="logged-in-as nav-item"><a href="#" onclick="logout.submit()" class="nav-link"><b class="username-lia">{{ mailcow_cc_username }} <span class="text-info">({{ dual_login.username }})</span> </b><i class="bi bi-power ms-2"></i></a></li>
         {% endif %}
         {% if not is_master %}
-        <li class="text-warning slave-info nav-item">[ slave ]</li>
+        <div class="nav-link form-check form-switch my-auto d-flex align-items-center">
+            <li class="slave-info">[ slave ]</li>
+        </div>
         {% endif %}
       </ul>
     </div><!--/.nav-collapse -->

@@ -2,8 +2,8 @@ FROM solr:7.7-slim
 
 USER root
 
-# renovate: datasource=github-releases depName=tianon/gosu versioning=semver-coerced
-ARG GOSU_VERSION=1.16
+# renovate: datasource=github-releases depName=tianon/gosu versioning=semver-coerced extractVersion=(?<version>.*)$
+ARG GOSU_VERSION=1.17
 
 COPY solr.sh /
 COPY solr-config-7.7.0.xml /
