@@ -1,6 +1,39 @@
 #!/usr/bin/env bash
 # renovate: datasource=github-releases depName=nextcloud/server versioning=semver extractVersion=^v(?<version>.*)$
-NEXTCLOUD_VERSION=28.0.1
+NEXTCLOUD_VERSION=28.0.11
+
+display_warning() {
+    local message=("$@")
+    local max_length=0
+
+    for line in "${message[@]}"; do
+        if (( ${#line} > max_length )); then
+            max_length=${#line}
+        fi
+    done
+
+    local border=$(printf '%*s' "$((max_length + 4))" '' | tr ' ' '#')
+
+    echo -e "\e[31m${border}"
+    for line in "${message[@]}"; do
+        printf "\e[31m# %-*s #\n" "$max_length" "$line"
+    done
+    echo -e "\e[31m${border}"
+    echo -e "\e[0m"
+}
+
+display_warning "WARNING: This Script is deprecated and will be removed in December 2024!" \
+                "mailcow will drop this installation/maintenance script within December 2024..." \
+                "To ensure you can still use your Nextcloud Datas, please migrate to a standalone" \
+                "Nextcloud instance either on a new Host or this host." \
+                "You can either use Nextcloud in Docker or install it manually." \
+                " "\
+                "mailcow will NOT DELETE any Nextcloud Data, even when this script was removed!!"
+
+echo -e "Waiting 5 seconds before continuing..."
+
+
+sleep 5
 
 echo -ne "Checking prerequisites..."
 sleep 1
@@ -68,11 +101,11 @@ if [[ ${NC_PURGE} == "y" ]]; then
     echo -e "\033[33mNot purging anything...\033[0m"
     exit 1
   fi
-  docker exec -it $(docker ps -f name=redis-mailcow -q) /bin/sh -c ' cat <<EOF | redis-cli
+  docker exec -it $(docker ps -f name=redis-mailcow -q) /bin/sh -c "cat <<EOF | redis-cli -a ${REDISPASS} --no-auth-warning
 SELECT 10
 FLUSHDB
 EOF
-'
+"
   if [ -d ./data/web/nextcloud/config ]; then
     mv ./data/web/nextcloud/config/ ./data/conf/nextcloud-config-folder-$(date +%s).bak
   fi

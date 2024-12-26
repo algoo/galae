@@ -86,6 +86,8 @@ $cors_settings['allowed_origins'] = str_replace(", ", "\n", $cors_settings['allo
 $cors_settings['allowed_methods'] = explode(", ", $cors_settings['allowed_methods']);
 
 $f2b_data = fail2ban('get');
+// mbox templates
+$mbox_templates = mailbox('get', 'mailbox_templates');
 
 $template = 'admin.twig';
 $template_data = [
@@ -104,9 +106,10 @@ $template_data = [
   'all_domains' => $all_domains,
   'mailboxes' => $mailboxes,
   'f2b_data' => $f2b_data,
-  'f2b_banlist_url' => getBaseUrl() . "/api/v1/get/fail2ban/banlist/" . $f2b_data['banlist_id'],
+  'f2b_banlist_url' => getBaseUrl() . "/f2b-banlist?id=" . $f2b_data['banlist_id'],
   'q_data' => quarantine('settings'),
   'qn_data' => quota_notification('get'),
+  'pw_reset_data' => reset_password('get_notification'),
   'rsettings_map' => file_get_contents('http://nginx:8081/settings.php'),
   'rsettings' => $rsettings,
   'rspamd_regex_maps' => $rspamd_regex_maps,
@@ -117,6 +120,8 @@ $template_data = [
   'show_rspamd_global_filters' => @$_SESSION['show_rspamd_global_filters'],
   'cors_settings' => $cors_settings,
   'is_https' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
+  'iam_settings' => $iam_settings,
+  'mbox_templates' => $mbox_templates,
   'lang_admin' => json_encode($lang['admin']),
   'lang_datatables' => json_encode($lang['datatables'])
 ];

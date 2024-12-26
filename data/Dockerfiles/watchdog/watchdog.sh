@@ -33,16 +33,16 @@ if [[ ! -p /tmp/com_pipe ]]; then
 fi
 
 # Wait for containers
-while ! mysqladmin status --host=${DBHOST} --port=${DBPORT} -u${DBUSER} -p${DBPASS} --silent; do
+while ! mariadb-admin status --ssl=false --host=${DBHOST} --port=${DBPORT} -u${DBUSER} -p${DBPASS} --silent; do
   echo "Waiting for SQL..."
   sleep 2
 done
 
 # Do not attempt to write to slave
 if [[ ! -z ${REDIS_SLAVEOF_IP} ]]; then
-  REDIS_CMDLINE="redis-cli -h ${REDIS_SLAVEOF_IP} -p ${REDIS_SLAVEOF_PORT}"
+  REDIS_CMDLINE="redis-cli -h ${REDIS_SLAVEOF_IP} -p ${REDIS_SLAVEOF_PORT} -a ${REDISPASS} --no-auth-warning"
 else
-  REDIS_CMDLINE="redis-cli -h redis -p 6379"
+  REDIS_CMDLINE="redis-cli -h redis -p 6379 -a ${REDISPASS} --no-auth-warning"
 fi
 
 until [[ $(${REDIS_CMDLINE} PING) == "PONG" ]]; do
@@ -169,9 +169,13 @@ function notify_error() {
       return 1
     fi
 
+    # Escape subject and body (https://stackoverflow.com/a/2705678)
+    ESCAPED_SUBJECT=$(echo ${SUBJECT} | sed -e 's/[\/&]/\\&/g')
+    ESCAPED_BODY=$(echo ${BODY} | sed -e 's/[\/&]/\\&/g')
+
     # Replace subject and body placeholders
-    WEBHOOK_BODY=$(echo ${WATCHDOG_NOTIFY_WEBHOOK_BODY} | sed "s/\$SUBJECT\|\${SUBJECT}/$SUBJECT/g" | sed "s/\$BODY\|\${BODY}/$BODY/g")
-    
+    WEBHOOK_BODY=$(echo ${WATCHDOG_NOTIFY_WEBHOOK_BODY} | sed -e "s/\$SUBJECT\|\${SUBJECT}/$ESCAPED_SUBJECT/g" -e "s/\$BODY\|\${BODY}/$ESCAPED_BODY/g")
+
     # POST to webhook
     curl -X POST -H "Content-Type: application/json" ${CURL_VERBOSE} -d "${WEBHOOK_BODY}" ${WATCHDOG_NOTIFY_WEBHOOK}
 
@@ -191,12 +195,12 @@ get_container_ip() {
     else
       sleep 0.5
       # get long container id for exact match
-      CONTAINER_ID=($(curl --silent --insecure https://dockerapi/containers/json | jq -r ".[] | {name: .Config.Labels[\"com.docker.compose.service\"], project: .Config.Labels[\"com.docker.compose.project\"], id: .Id}" | jq -rc "select( .name | tostring == \"${1}\") | select( .project | tostring | contains(\"${COMPOSE_PROJECT_NAME,,}\")) | .id"))
+      CONTAINER_ID=($(curl --silent --insecure https://dockerapi.${COMPOSE_PROJECT_NAME}_mailcow-network/containers/json | jq -r ".[] | {name: .Config.Labels[\"com.docker.compose.service\"], project: .Config.Labels[\"com.docker.compose.project\"], id: .Id}" | jq -rc "select( .name | tostring == \"${1}\") | select( .project | tostring | contains(\"${COMPOSE_PROJECT_NAME,,}\")) | .id"))
       # returned id can have multiple elements (if scaled), shuffle for random test
       CONTAINER_ID=($(printf "%s\n" "${CONTAINER_ID[@]}" | shuf))
       if [[ ! -z ${CONTAINER_ID} ]]; then
         for matched_container in "${CONTAINER_ID[@]}"; do
-          CONTAINER_IPS=($(curl --silent --insecure https://dockerapi/containers/${matched_container}/json | jq -r '.NetworkSettings.Networks[].IPAddress'))
+          CONTAINER_IPS=($(curl --silent --insecure https://dockerapi.${COMPOSE_PROJECT_NAME}_mailcow-network/containers/${matched_container}/json | jq -r '.NetworkSettings.Networks[].IPAddress'))
           for ip_match in "${CONTAINER_IPS[@]}"; do
             # grep will do nothing if one of these vars is empty
             [[ -z ${ip_match} ]] && continue
@@ -326,7 +330,7 @@ redis_checks() {
     touch /tmp/redis-mailcow; echo "$(tail -50 /tmp/redis-mailcow)" > /tmp/redis-mailcow
     host_ip=$(get_container_ip redis-mailcow)
     err_c_cur=${err_count}
-    /usr/lib/nagios/plugins/check_tcp -4 -H redis-mailcow -p 6379 -E -s "PING\n" -q "QUIT" -e "PONG" 2>> /tmp/redis-mailcow 1>&2; err_count=$(( ${err_count} + $? ))
+    /usr/lib/nagios/plugins/check_tcp -4 -H redis-mailcow -p 6379 -E -s "AUTH ${REDISPASS}\nPING\n" -q "QUIT" -e "PONG" 2>> /tmp/redis-mailcow 1>&2; err_count=$(( ${err_count} + $? ))
     [ ${err_c_cur} -eq ${err_count} ] && [ ! $((${err_count} - 1)) -lt 0 ] && err_count=$((${err_count} - 1)) diff_c=1
     [ ${err_c_cur} -ne ${err_count} ] && diff_c=$(( ${err_c_cur} - ${err_count} ))
     progress "Redis" ${THRESHOLD} $(( ${THRESHOLD} - ${err_count} )) ${diff_c}
@@ -499,12 +503,12 @@ dovecot_repl_checks() {
   err_count=0
   diff_c=0
   THRESHOLD=${DOVECOT_REPL_THRESHOLD}
-  D_REPL_STATUS=$(redis-cli -h redis -r GET DOVECOT_REPL_HEALTH)
+  D_REPL_STATUS=$(redis-cli -h redis -a ${REDISPASS} --no-auth-warning -r GET DOVECOT_REPL_HEALTH)
   # Reduce error count by 2 after restarting an unhealthy container
   trap "[ ${err_count} -gt 1 ] && err_count=$(( ${err_count} - 2 ))" USR1
   while [ ${err_count} -lt ${THRESHOLD} ]; do
     err_c_cur=${err_count}
-    D_REPL_STATUS=$(redis-cli --raw -h redis GET DOVECOT_REPL_HEALTH)
+    D_REPL_STATUS=$(redis-cli --raw -h redis -a ${REDISPASS} --no-auth-warning GET DOVECOT_REPL_HEALTH)
     if [[ "${D_REPL_STATUS}" != "1" ]]; then
       err_count=$(( ${err_count} + 1 ))
     fi
@@ -574,19 +578,19 @@ ratelimit_checks() {
   err_count=0
   diff_c=0
   THRESHOLD=${RATELIMIT_THRESHOLD}
-  RL_LOG_STATUS=$(redis-cli -h redis LRANGE RL_LOG 0 0 | jq .qid)
+  RL_LOG_STATUS=$(redis-cli -h redis -a ${REDISPASS} --no-auth-warning LRANGE RL_LOG 0 0 | jq .qid)
   # Reduce error count by 2 after restarting an unhealthy container
   trap "[ ${err_count} -gt 1 ] && err_count=$(( ${err_count} - 2 ))" USR1
   while [ ${err_count} -lt ${THRESHOLD} ]; do
     err_c_cur=${err_count}
     RL_LOG_STATUS_PREV=${RL_LOG_STATUS}
-    RL_LOG_STATUS=$(redis-cli -h redis LRANGE RL_LOG 0 0 | jq .qid)
+    RL_LOG_STATUS=$(redis-cli -h redis -a ${REDISPASS} --no-auth-warning LRANGE RL_LOG 0 0 | jq .qid)
     if [[ ${RL_LOG_STATUS_PREV} != ${RL_LOG_STATUS} ]]; then
       err_count=$(( ${err_count} + 1 ))
       echo 'Last 10 applied ratelimits (may overlap with previous reports).' > /tmp/ratelimit
       echo 'Full ratelimit buckets can be emptied by deleting the ratelimit hash from within mailcow UI (see /debug -> Protocols -> Ratelimit):' >> /tmp/ratelimit
       echo >> /tmp/ratelimit
-      redis-cli --raw -h redis LRANGE RL_LOG 0 10 | jq . >> /tmp/ratelimit
+      redis-cli --raw -h redis -a ${REDISPASS} --no-auth-warning LRANGE RL_LOG 0 10 | jq . >> /tmp/ratelimit
     fi
     [ ${err_c_cur} -eq ${err_count} ] && [ ! $((${err_count} - 1)) -lt 0 ] && err_count=$((${err_count} - 1)) diff_c=1
     [ ${err_c_cur} -ne ${err_count} ] && diff_c=$(( ${err_c_cur} - ${err_count} ))
@@ -669,7 +673,7 @@ acme_checks() {
   err_count=0
   diff_c=0
   THRESHOLD=${ACME_THRESHOLD}
-  ACME_LOG_STATUS=$(redis-cli -h redis GET ACME_FAIL_TIME)
+  ACME_LOG_STATUS=$(redis-cli -h redis -a ${REDISPASS} --no-auth-warning GET ACME_FAIL_TIME)
   if [[ -z "${ACME_LOG_STATUS}" ]]; then
     ${REDIS_CMDLINE} SET ACME_FAIL_TIME 0
     ACME_LOG_STATUS=0
@@ -681,7 +685,7 @@ acme_checks() {
     ACME_LOG_STATUS_PREV=${ACME_LOG_STATUS}
     ACME_LC=0
     until [[ ! -z ${ACME_LOG_STATUS} ]] || [ ${ACME_LC} -ge 3 ]; do
-      ACME_LOG_STATUS=$(redis-cli -h redis GET ACME_FAIL_TIME 2> /dev/null)
+      ACME_LOG_STATUS=$(redis-cli -h redis -a ${REDISPASS} --no-auth-warning GET ACME_FAIL_TIME 2> /dev/null)
       sleep 3
       ACME_LC=$((ACME_LC+1))
     done
@@ -716,7 +720,7 @@ rspamd_checks() {
 From: watchdog@localhost
 
 Empty
-' | usr/bin/curl --max-time 10 -s --data-binary @- --unix-socket /var/lib/rspamd/rspamd.sock http://rspamd/scan | jq -rc .default.required_score | sed 's/\..*//' )
+' | usr/bin/curl --max-time 10 -s --data-binary @- --unix-socket /var/lib/rspamd/rspamd.sock http://rspamd.${COMPOSE_PROJECT_NAME}_mailcow-network/scan | jq -rc .default.required_score | sed 's/\..*//' )
     if [[ ${SCORE} -ne 9999 ]]; then
       echo "Rspamd settings check failed, score returned: ${SCORE}" 2>> /tmp/rspamd-mailcow 1>&2
       err_count=$(( ${err_count} + 1))
@@ -1095,12 +1099,12 @@ while true; do
   elif [[ ${com_pipe_answer} =~ .+-mailcow ]]; then
     kill -STOP ${BACKGROUND_TASKS[*]}
     sleep 10
-    CONTAINER_ID=$(curl --silent --insecure https://dockerapi/containers/json | jq -r ".[] | {name: .Config.Labels[\"com.docker.compose.service\"], project: .Config.Labels[\"com.docker.compose.project\"], id: .Id}" | jq -rc "select( .name | tostring | contains(\"${com_pipe_answer}\")) | select( .project | tostring | contains(\"${COMPOSE_PROJECT_NAME,,}\")) | .id")
+    CONTAINER_ID=$(curl --silent --insecure https://dockerapi.${COMPOSE_PROJECT_NAME}_mailcow-network/containers/json | jq -r ".[] | {name: .Config.Labels[\"com.docker.compose.service\"], project: .Config.Labels[\"com.docker.compose.project\"], id: .Id}" | jq -rc "select( .name | tostring | contains(\"${com_pipe_answer}\")) | select( .project | tostring | contains(\"${COMPOSE_PROJECT_NAME,,}\")) | .id")
     if [[ ! -z ${CONTAINER_ID} ]]; then
       if [[ "${com_pipe_answer}" == "php-fpm-mailcow" ]]; then
-        HAS_INITDB=$(curl --silent --insecure -XPOST https://dockerapi/containers/${CONTAINER_ID}/top | jq '.msg.Processes[] | contains(["php -c /usr/local/etc/php -f /web/inc/init_db.inc.php"])' | grep true)
+        HAS_INITDB=$(curl --silent --insecure -XPOST https://dockerapi.${COMPOSE_PROJECT_NAME}_mailcow-network/containers/${CONTAINER_ID}/top | jq '.msg.Processes[] | contains(["php -c /usr/local/etc/php -f /web/inc/init_db.inc.php"])' | grep true)
       fi
-      S_RUNNING=$(($(date +%s) - $(curl --silent --insecure https://dockerapi/containers/${CONTAINER_ID}/json | jq .State.StartedAt | xargs -n1 date +%s -d)))
+      S_RUNNING=$(($(date +%s) - $(curl --silent --insecure https://dockerapi.${COMPOSE_PROJECT_NAME}_mailcow-network/containers/${CONTAINER_ID}/json | jq .State.StartedAt | xargs -n1 date +%s -d)))
       if [ ${S_RUNNING} -lt 360 ]; then
         log_msg "Container is running for less than 360 seconds, skipping action..."
       elif [[ ! -z ${HAS_INITDB} ]]; then
@@ -1108,7 +1112,7 @@ while true; do
         sleep 60
       else
         log_msg "Sending restart command to ${CONTAINER_ID}..."
-        curl --silent --insecure -XPOST https://dockerapi/containers/${CONTAINER_ID}/restart
+        curl --silent --insecure -XPOST https://dockerapi.${COMPOSE_PROJECT_NAME}_mailcow-network/containers/${CONTAINER_ID}/restart
         notify_error "${com_pipe_answer}"
         log_msg "Wait for restarted container to settle and continue watching..."
         sleep 35

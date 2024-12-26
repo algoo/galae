@@ -3,7 +3,7 @@ function init_db_schema() {
   try {
     global $pdo;
 
-    $db_version = "26022024_1433";
+    $db_version = "20112024_1105";
 
     $stmt = $pdo->query("SHOW TABLES LIKE 'versions'");
     $num_results = count($stmt->fetchAll(PDO::FETCH_ASSOC));
@@ -111,6 +111,10 @@ function init_db_schema() {
           "c_name" => "VARCHAR(255) NOT NULL",
           "c_password" => "VARCHAR(255) NOT NULL DEFAULT ''",
           "c_cn" => "VARCHAR(255)",
+          "c_l" => "VARCHAR(255)",
+          "c_o" => "VARCHAR(255)",
+          "c_ou" => "VARCHAR(255)",
+          "c_telephonenumber" => "VARCHAR(255)",
           "mail" => "VARCHAR(255) NOT NULL",
           // TODO -> use TEXT and check if SOGo login breaks on empty aliases
           "aliases" => "TEXT NOT NULL",
@@ -365,6 +369,7 @@ function init_db_schema() {
           "custom_attributes" => "JSON NOT NULL DEFAULT ('{}')",
           "kind" => "VARCHAR(100) NOT NULL DEFAULT ''",
           "multiple_bookings" => "INT NOT NULL DEFAULT -1",
+          "authsource" => "ENUM('mailcow', 'keycloak', 'generic-oidc', 'ldap') DEFAULT 'mailcow'",
           "created" => "DATETIME(0) NOT NULL DEFAULT NOW(0)",
           "modified" => "DATETIME ON UPDATE CURRENT_TIMESTAMP",
           "active" => "TINYINT(1) NOT NULL DEFAULT '1'"
@@ -485,6 +490,7 @@ function init_db_schema() {
           "quarantine_notification" => "TINYINT(1) NOT NULL DEFAULT '1'",
           "quarantine_category" => "TINYINT(1) NOT NULL DEFAULT '1'",
           "app_passwds" => "TINYINT(1) NOT NULL DEFAULT '1'",
+          "pw_reset" => "TINYINT(1) NOT NULL DEFAULT '1'",
           ),
         "keys" => array(
           "primary" => array(
@@ -566,6 +572,20 @@ function init_db_schema() {
         "keys" => array(
           "primary" => array(
             "" => array("id")
+          )
+        ),
+        "attr" => "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
+      ),
+      "identity_provider" => array(
+        "cols" => array(
+          "key" => "VARCHAR(255) NOT NULL",
+          "value" => "TEXT NOT NULL",
+          "created" => "DATETIME(0) NOT NULL DEFAULT NOW(0)",
+          "modified" => "DATETIME ON UPDATE CURRENT_TIMESTAMP"
+        ),
+        "keys" => array(
+          "primary" => array(
+            "" => array("key")
           )
         ),
         "attr" => "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
@@ -684,6 +704,19 @@ function init_db_schema() {
         "attr" => "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
       ),
       "da_sso" => array(
+        "cols" => array(
+          "username" => "VARCHAR(255) NOT NULL",
+          "token" => "VARCHAR(255) NOT NULL",
+          "created" => "DATETIME(0) NOT NULL DEFAULT NOW(0)",
+        ),
+        "keys" => array(
+          "primary" => array(
+            "" => array("token", "created")
+          ),
+        ),
+        "attr" => "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
+      ),
+      "reset_password" => array(
         "cols" => array(
           "username" => "VARCHAR(255) NOT NULL",
           "token" => "VARCHAR(255) NOT NULL",
@@ -992,7 +1025,7 @@ function init_db_schema() {
           )
         ),
         "attr" => "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
-      ),      
+      ),
       "pushover" => array(
         "cols" => array(
           "username" => "VARCHAR(255) NOT NULL",
@@ -1376,7 +1409,7 @@ function init_db_schema() {
         "key_size" => 2048,
         "max_quota_for_domain" => 10240 * 1048576,
       )
-    );     
+    );
     $default_mailbox_template = array(
       "template" => "Default",
       "type" => "mailbox",
@@ -1411,7 +1444,7 @@ function init_db_schema() {
         "acl_quarantine_category" => 1,
         "acl_app_passwds" => 1,
       )
-    );        
+    );
     $stmt = $pdo->prepare("SELECT id FROM `templates` WHERE `type` = :type AND `template` = :template");
     $stmt->execute(array(
       ":type" => "domain",
@@ -1425,8 +1458,8 @@ function init_db_schema() {
         ":type" => "domain",
         ":template" => $default_domain_template["template"],
         ":attributes" => json_encode($default_domain_template["attributes"])
-      )); 
-    }    
+      ));
+    }
     $stmt = $pdo->prepare("SELECT id FROM `templates` WHERE `type` = :type AND `template` = :template");
     $stmt->execute(array(
       ":type" => "mailbox",
@@ -1440,8 +1473,11 @@ function init_db_schema() {
         ":type" => "mailbox",
         ":template" => $default_mailbox_template["template"],
         ":attributes" => json_encode($default_mailbox_template["attributes"])
-      )); 
-    } 
+      ));
+    }
+
+    // remove old sogo views and triggers
+    $pdo->query("DROP TRIGGER IF EXISTS sogo_update_password");
 
     if (php_sapi_name() == "cli") {
       echo "DB initialization completed" . PHP_EOL;
@@ -1467,6 +1503,7 @@ function init_db_schema() {
 }
 if (php_sapi_name() == "cli") {
   include '/web/inc/vars.inc.php';
+  include '/web/inc/functions.inc.php';
   include '/web/inc/functions.docker.inc.php';
   // $now = new DateTime();
   // $mins = $now->getOffset() / 60;
@@ -1488,9 +1525,7 @@ if (php_sapi_name() == "cli") {
   if (intval($res['OK_C']) === 2) {
     // Be more precise when replacing into _sogo_static_view, col orders may change
     try {
-      $stmt = $pdo->query("REPLACE INTO _sogo_static_view (`c_uid`, `domain`, `c_name`, `c_password`, `c_cn`, `mail`, `aliases`, `ad_aliases`, `ext_acl`, `kind`, `multiple_bookings`)
-        SELECT `c_uid`, `domain`, `c_name`, `c_password`, `c_cn`, `mail`, `aliases`, `ad_aliases`, `ext_acl`, `kind`, `multiple_bookings` from sogo_view");
-      $stmt = $pdo->query("DELETE FROM _sogo_static_view WHERE `c_uid` NOT IN (SELECT `username` FROM `mailbox` WHERE `active` = '1');");
+      update_sogo_static_view();
       echo "Fixed _sogo_static_view" . PHP_EOL;
     }
     catch ( Exception $e ) {

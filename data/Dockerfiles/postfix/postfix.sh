@@ -5,7 +5,7 @@ trap "postfix stop" EXIT
 [[ ! -d /opt/postfix/conf/sql/ ]] && mkdir -p /opt/postfix/conf/sql/
 
 # Wait for MySQL to warm-up
-while ! mysqladmin status --host=${DBHOST} --port=${DBPORT} -u${DBUSER} -p${DBPASS} --silent; do
+while ! mariadb-admin status --ssl=false status --host=${DBHOST} --port=${DBPORT} --socket=/var/run/mysqld/mysqld.sock -u${DBUSER} -p${DBPASS} --silent; do
   echo "Waiting for database to come up..."
   sleep 2
 done
@@ -254,9 +254,9 @@ user = ${DBUSER}
 password = ${DBPASS}
 hosts = inet:${DBHOST}:${DBPORT}
 dbname = ${DBNAME}
-query = SELECT goto FROM alias 
-  WHERE is_wildcard = '1' 
-    AND (active = '1' OR active = '2') 
+query = SELECT goto FROM alias
+  WHERE is_wildcard = '1'
+    AND (active = '1' OR active = '2')
     AND '%s' LIKE REPLACE(address, '*', '%%');
 EOF
 
@@ -409,7 +409,7 @@ EOF
 
 if [ ! -f /opt/postfix/conf/dns_blocklists.cf ]; then
   cat <<EOF > /opt/postfix/conf/dns_blocklists.cf
-# This file can be edited. 
+# This file can be edited.
 # Delete this file and restart postfix container to revert any changes.
 postscreen_dnsbl_sites = wl.mailspike.net=127.0.0.[18;19;20]*-2
   hostkarma.junkemailfilter.com=127.0.0.1*-2
@@ -429,12 +429,6 @@ postscreen_dnsbl_sites = wl.mailspike.net=127.0.0.[18;19;20]*-2
   b.barracudacentral.org=127.0.0.2*7
   bl.mailspike.net=127.0.0.2*5
   bl.mailspike.net=127.0.0.[10;11;12]*4
-  dnsbl.sorbs.net=127.0.0.10*8
-  dnsbl.sorbs.net=127.0.0.5*6
-  dnsbl.sorbs.net=127.0.0.7*3
-  dnsbl.sorbs.net=127.0.0.8*2
-  dnsbl.sorbs.net=127.0.0.6*2
-  dnsbl.sorbs.net=127.0.0.9*2
 EOF
 fi
 DNSBL_CONFIG=$(grep -v '^#' /opt/postfix/conf/dns_blocklists.cf | grep '\S')

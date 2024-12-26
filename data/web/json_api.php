@@ -509,16 +509,6 @@ if (isset($_GET['query'])) {
           print(json_encode($getArgs));
           $_SESSION['challenge'] = $WebAuthn->getChallenge();
           return;
-        break;          
-        case "fail2ban":
-          if (!isset($_SESSION['mailcow_cc_role'])){
-            switch ($object) {
-              case 'banlist':
-                header('Content-Type: text/plain');
-                echo fail2ban('banlist', 'get', $extra);
-              break;
-            }
-          }
         break;
       }
       if (isset($_SESSION['mailcow_cc_role'])) {
@@ -953,6 +943,17 @@ if (isset($_GET['query'])) {
                 }
                 echo (isset($logs) && !empty($logs)) ? json_encode($logs, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : '{}';
               break;
+              case "cron":
+                // 0 is first record, so empty is fine
+                if (isset($extra)) {
+                  $extra = preg_replace('/[^\d\-]/i', '', $extra);
+                  $logs = get_logs('cron-mailcow', $extra);
+                }
+                else {
+                  $logs = get_logs('cron-mailcow');
+                }
+                echo (isset($logs) && !empty($logs)) ? json_encode($logs, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : '{}';
+              break;
               case "postfix":
                 // 0 is first record, so empty is fine
                 if (isset($extra)) {
@@ -1077,7 +1078,7 @@ if (isset($_GET['query'])) {
                   ['db' => 'last_mail_login', 'dt' => 4, 'dummy' => true, 'order_subquery' => "SELECT MAX(`datetime`) FROM `sasl_log` WHERE `service` != 'SSO' AND `username` = `m`.`username`"],
                   ['db' => 'last_pw_change', 'dt' => 5, 'dummy' => true, 'order_subquery' => "JSON_EXTRACT(attributes, '$.passwd_update')"],
                   ['db' => 'in_use', 'dt' => 6, 'dummy' => true, 'order_subquery' => "(SELECT SUM(bytes) FROM `quota2` WHERE `quota2`.`username` = `m`.`username`) / `m`.`quota`"],
-                  ['db' => 'messages', 'dt' => 17, 'dummy' => true, 'order_subquery' => "SELECT SUM(messages) FROM `quota2` WHERE `quota2`.`username` = `m`.`username`"],
+                  ['db' => 'messages', 'dt' => 18, 'dummy' => true, 'order_subquery' => "SELECT SUM(messages) FROM `quota2` WHERE `quota2`.`username` = `m`.`username`"],
                   ['db' => 'tags', 'dt' => 20, 'dummy' => true, 'search' => ['join' => 'LEFT JOIN `tags_mailbox` AS `tm` ON `tm`.`username` = `m`.`username`', 'where_column' => '`tm`.`tag_name`']],
                   ['db' => 'active', 'dt' => 21]
                 ];
@@ -1420,10 +1421,6 @@ if (isset($_GET['query'])) {
           break;
           case "fail2ban":
             switch ($object) {
-              case 'banlist':
-                header('Content-Type: text/plain');
-                echo fail2ban('banlist', 'get', $extra);
-              break;
               default:
                 $data = fail2ban('get');
                 process_get_return($data);
@@ -1697,6 +1694,13 @@ if (isset($_GET['query'])) {
               $score = array("score" => preg_replace("/\s+/", "", $score));
             process_get_return($score);
           break;
+          case "identity-provider":
+            if($_SESSION['mailcow_cc_role'] === 'admin') {
+              process_get_return($iam_settings);
+            } else {
+              process_get_return(null);
+            }
+          break;
         break;
         // return no route found if no case is matched
         default:
@@ -1850,6 +1854,9 @@ if (isset($_GET['query'])) {
         case "rlhash":
           echo ratelimit('delete', null, implode($items));
         break;
+        case "identity-provider":
+          process_delete_return(identity_provider('delete'));
+        break;
         // return no route found if no case is matched
         default:
           http_response_code(404);
@@ -1973,7 +1980,6 @@ if (isset($_GET['query'])) {
         case "quota_notification_bcc":
           process_edit_return(quota_notification_bcc('edit', $attr));
         break;
-        break;
         case "mailq":
           process_edit_return(mailq('edit', array_merge(array('qid' => $items), $attr)));
         break;
@@ -2020,6 +2026,9 @@ if (isset($_GET['query'])) {
         break;
         case "rl-mbox":
           process_edit_return(ratelimit('edit', 'mailbox', array_merge(array('object' => $items), $attr)));
+        break;
+        case "rename-mbox":
+          process_edit_return(mailbox('edit', 'mailbox_rename', array_merge(array('mailbox' => $items), $attr)));
         break;
         case "user-acl":
           process_edit_return(acl('edit', 'user', array_merge(array('username' => $items), $attr)));
@@ -2068,6 +2077,17 @@ if (isset($_GET['query'])) {
         break;
         case "cors":
           process_edit_return(cors('edit', $attr));
+        case "identity-provider":
+          process_edit_return(identity_provider('edit', $attr));
+        break;
+        case "identity-provider-test":
+          process_edit_return(identity_provider('test', $attr));
+        break;
+        case "cors":
+          process_edit_return(cors('edit', $attr));
+        break;
+        case "reset-password-notification":
+          process_edit_return(reset_password('edit_notification', $attr));
         break;
         // return no route found if no case is matched
         default:
