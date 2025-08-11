@@ -28,7 +28,8 @@
         "spam_score": "垃圾郵件分數",
         "syncjobs": "同步任務",
         "tls_policy": "TLS 規則",
-        "unlimited_quota": "信箱容量配額無上限"
+        "unlimited_quota": "信箱容量配額無上限",
+        "pw_reset": "允許重置mailcow使用者密碼"
     },
     "add": {
         "activate_filter_warn": "當\"啟用\"被勾選，所有其他過濾器都會被消除。",
@@ -351,7 +352,14 @@
         "ip_check_opt_in": "選擇使用第三方服務 <strong>ipv4.mailcow.email</strong> 和 <strong>ipv6.mailcow.email</strong> 來解析外部 IP 位址。",
         "ip_check_disabled": "IP 檢查已停用。 您可以在<br> <strong>系統 > 配置 > 選項 > 自訂</strong>下啟用它",
         "options": "選項",
-        "queue_unban": "解除禁令"
+        "queue_unban": "解除禁令",
+        "reset_password_vars": "<code>{{link}}</code> 生成密碼重置連結<br><code>{{username}}</code> 請求密碼重置的使用者信箱<br><code>{{username2}}</code> 備援電子信箱名稱<br><code>{{date}}</code> 密碼重置要求之日期<br><code>{{token_lifetime}}</code> 權杖(token)壽命(以分鐘計)<br><code>{{hostname}}</code> mailcow 主機名稱(hostname)",
+        "password_reset_info": "若無提供備援電子郵件，此功能將無法使用。",
+        "password_reset_settings": "密碼復原設定",
+        "password_reset_tmpl_html": "HTML 範本",
+        "password_reset_tmpl_text": "文字範本",
+        "password_settings": "密碼設定",
+        "restore_template": "留白以還原預設範本"
     },
     "danger": {
         "access_denied": "存取拒絕或表單資料有誤",
@@ -480,7 +488,14 @@
         "extended_sender_acl_denied": "缺少設定外部寄件者地址的 ACL",
         "template_exists": "模板 %s 已存在",
         "template_id_invalid": "範本 ID %s 無效",
-        "template_name_invalid": "模板名稱無效"
+        "template_name_invalid": "模板名稱無效",
+        "password_reset_invalid_user": "查無此信箱或無設定備援郵件",
+        "password_reset_na": "密碼恢復目前無法使用。請聯繫您的管理員。",
+        "to_invalid": "收件者不能為空",
+        "img_size_exceeded": "圖片超出最大檔案大小",
+        "recovery_email_failed": "無法寄送還原電子郵件。請聯絡您的管理員。",
+        "reset_token_limit_exceeded": "重置權杖(token)已達上限。請稍後再試。",
+        "img_dimensions_exceeded": "圖片超出最大圖片大小"
     },
     "debug": {
         "chart_this_server": "圖表 (此伺服器)",
@@ -490,7 +505,6 @@
         "external_logs": "外部紀錄",
         "history_all_servers": "歷史 (所有伺服器)",
         "in_memory_logs": "記憶體紀錄",
-        "jvm_memory_solr": "JVM 記憶體使用量",
         "last_modified": "上次修改時間",
         "log_info": "<p>mailcow 的<b>記憶體紀錄</b>會被收集到 Redis 清單中並且每分鐘自動縮減到 LOG_LINES (%d) 以避免重複撞擊 (hammering) 造成的大量記錄。\r\n<br>記憶體紀錄並不會永久保存。所有記錄到記憶體的應用程式也會同時透過預設紀錄的驅動程式寫入紀錄到 Docker 常駐程式中。\r\n<br>記憶體紀錄是設計用來為容器中的小問題除錯的。</p>\r\n<p><b>外部紀錄</b>透過應用程式提供的 API 收集。</p>\r\n<p><b>靜態紀錄</b>大多為不寫入到 Dockerd，但仍然需要被保存的活動紀錄 (API 紀錄除外)。</p>",
         "login_time": "時間",
@@ -499,8 +513,6 @@
         "restart_container": "重新啟動",
         "service": "服務",
         "size": "大小",
-        "solr_dead": "Solr 正在啟動,停用或已停止運行.",
-        "solr_status": "Solr 狀態",
         "started_at": "啟動於",
         "started_on": "啟動於",
         "static_logs": "靜態紀錄",
@@ -511,7 +523,7 @@
         "architecture": "結構",
         "current_time": "系統時間",
         "container_running": "正在執行",
-        "memory": "記憶",
+        "memory": "記憶體",
         "container_disabled": "容器停止或停用",
         "container_stopped": "已停止",
         "cores": "核心",
@@ -541,7 +553,7 @@
         "alias": "編輯別名",
         "allow_from_smtp": "只允許這些 IP 使用 <b>SMTP</b>",
         "allow_from_smtp_info": "留空將允許所有寄件人<br>IPv4/IPv6 地址或網路",
-        "allowed_protocols": "允許的協定",
+        "allowed_protocols": "使用者直接存取時允許的協定 (不影響應用程式密碼所能使用的協定)",
         "app_name": "應用程式名稱",
         "app_passwd": "應用程式密碼",
         "app_passwd_protocols": "應用程式密碼允許的協定",
@@ -630,8 +642,8 @@
         "sieve_desc": "簡短描述",
         "sieve_type": "過濾器類型",
         "skipcrossduplicates": "跳過在其他資料夾中重複的郵件 (優先使用先找到的郵件)",
-        "sogo_access": "授權 SOGo 的直接存取權",
-        "sogo_access_info": "mail UI 內的 SSO 仍可以運作。此設定既不會影響到存取其他服務的權限，也不會刪除或更改使用者既有的個人檔案。",
+        "sogo_access": "直接轉寄至SOGo",
+        "sogo_access_info": "登入後，使用者會自動重新導向至SOGo。",
         "sogo_visible": "別名會在 SOGo 中顯示",
         "sogo_visible_info": "此選項只會影響可以顯示於 SOGo 上物件 (指向至少一個本地信箱的共享或非共享別名地址)。如果設為隱藏，別名地址將不會顯示於寄件人下拉選項中。",
         "spam_alias": "新增或更改臨時別名地址",
@@ -650,7 +662,19 @@
         "validate_save": "驗證並儲存",
         "domain_footer_info": "網域範圍的頁尾將會新增至與該網域內的位址關聯的所有外發電子郵件。 <br> 以下變數可用於頁尾：",
         "custom_attributes": "自訂屬性",
-        "pushover_sound": "聲音"
+        "pushover_sound": "聲音",
+        "domain_footer": "全域頁腳",
+        "domain_footer_info_vars": {
+            "from_name": "{= from_name =}   - 從信封中的名稱部分，例如：\"Mailcow &lt;moo@mailcow.tld&gt;\" 則回傳 \"Mailcow\"",
+            "auth_user": "{= auth_user =}   - MTA所認證之指定使用者名稱",
+            "from_user": "{= from_user =}   - 從信封中的使用者部分。例如：\"moo@mailcow.tld\" 則回傳\"moo\"",
+            "from_addr": "{= from_addr =}   - 從信封中的地址部分",
+            "from_domain": "{= from_domain =} - 從信封中的域名(domain)部分"
+        },
+        "domain_footer_skip_replies": "於回信中忽落頁腳",
+        "domain_footer_html": "HTML 頁腳",
+        "password_recovery_email": "密碼重置備援信箱",
+        "domain_footer_plain": "純文字頁腳"
     },
     "fido2": {
         "confirm": "確認",
@@ -704,9 +728,16 @@
         "fido2_webauthn": "FIDO2/WebAuthn Login",
         "login": "登入",
         "mobileconfig_info": "請使用信箱使用者登入以下載 Apple 連接描述檔案。",
-        "other_logins": "金鑰登入",
+        "other_logins": "或透過以下方式登入",
         "password": "密碼",
-        "username": "使用者名稱"
+        "username": "使用者名稱",
+        "back_to_mailcow": "返回至mailcow",
+        "invalid_pass_reset_token": "密碼重置權杖(token)無效或已過期<br>請重新請求新的重置連結。",
+        "forgot_password": "> 忘記密碼?",
+        "new_password": "新密碼",
+        "new_password_confirm": "確認新密碼",
+        "reset_password": "重置密碼",
+        "request_reset_password": "要求重置密碼"
     },
     "mailbox": {
         "action": "操作",
@@ -732,7 +763,7 @@
         "all_domains": "所有域名",
         "allow_from_smtp": "只允許這些 IP 使用<b>SMTP</b>",
         "allow_from_smtp_info": "留空以允許所有發送者<br>IPv4/IPv6 地址或網路",
-        "allowed_protocols": "使用者直接存取時允許的協定 (不影響應用程式密碼所能使用的協定)",
+        "allowed_protocols": "允許的協定",
         "backup_mx": "中繼域名",
         "bcc": "密件副本",
         "bcc_destination": "密件副本目標地址",
@@ -954,9 +985,7 @@
     },
     "start": {
         "help": "顯示/隱藏 幫助面板",
-        "imap_smtp_server_auth_info": "請使用完整的信箱地址及明文認證 (PLAIN) 來登入。<br>\r\n你的登入資訊會在伺服器端被加密。",
-        "mailcow_apps_detail": "使用 mailcow 應用程式來存取你的郵件、行事曆、聯絡資訊及其他更多功能。",
-        "mailcow_panel_detail": "<b>域名管理員</b> 可以創建、修改、刪除信箱別名，以及讀取並修改被指定他們名下的域名。<br>\r\n<b>信箱使用者</b> 可以創建臨時別名 (垃圾郵件別名)，更改密碼和垃圾郵件過濾器設定。"
+        "imap_smtp_server_auth_info": "請使用完整的信箱地址及明文認證 (PLAIN) 來登入。<br>\r\n你的登入資訊會在伺服器端被加密。"
     },
     "success": {
         "acl_saved": "%s 的存取權限表已儲存",
@@ -1042,7 +1071,9 @@
         "cors_headers_edited": "CORS 設定已儲存",
         "domain_footer_modified": "網域頁尾 %s 的變更已儲存",
         "f2b_banlist_refreshed": "禁止清單 ID 已成功刷新。",
-        "ip_check_opt_in_modified": "IP檢查已成功儲存"
+        "ip_check_opt_in_modified": "IP檢查已成功儲存",
+        "password_changed_success": "密碼重置成功",
+        "recovery_email_sent": "已寄送復原郵件至 %s"
     },
     "tfa": {
         "api_register": "%s 使用 Yubico Cloud API，請在<a href=\"https://upgrade.yubico.com/getapikey/\" target=\"_blank\">這裡</a>為這把金鑰獲取 API 金鑰",
@@ -1069,7 +1100,8 @@
         "webauthn": "WebAuthn 認證",
         "waiting_usb_auth": "<i>等待 USB 裝置...</i><br><br>請觸碰 USB 裝置上的按鈕。",
         "waiting_usb_register": "<i>等待 USB 裝置...</i><br><br>請輸入密碼並觸碰 USB 裝置上的按鈕來確認註冊。",
-        "yubi_otp": "Yubico OTP 認證"
+        "yubi_otp": "Yubico OTP 認證",
+        "authenticators": "驗證器(Authenticators)"
     },
     "user": {
         "action": "操作",
@@ -1103,10 +1135,11 @@
         "created_on": "建立於",
         "daily": "每日",
         "day": "日",
+        "description": "描述",
         "delete_ays": "請確認刪除。",
         "direct_aliases": "直接別名",
         "direct_aliases_desc": "直接別名會受到垃圾郵件過濾器和 TLS 規則限制。",
-        "direct_protocol_access": "此信箱使用者有 <b>直接、外部存取</b> 至下列協定及應用程式。此設定是由管理者設定。應用程式密碼則可以用於授權單獨的協定及應用程式存取權限。<br>\"登入至網頁信箱\" 使用 SSO (single-sign-on) 來登入至 SOGO 且不受前面的限制。",
+        "direct_protocol_access": "此信箱使用者有 <b>直接、外部存取</b> 至下列協定及應用程式。此設定是由管理者設定。應用程式密碼則可以用於授權單獨的協定及應用程式存取權限。<br>\"网络邮件\" 使用 SSO (single-sign-on) 來登入至 SOGO 且不受前面的限制。",
         "eas_reset": "重設 ActiveSync 裝置快取",
         "eas_reset_help": "在許多情況下，重設裝置快取可以幫助恢復錯誤的 ActiveSync 資料。<br><b>注意:</b> 所有元素都會被重新下載！",
         "eas_reset_now": "立即重設",
@@ -1147,7 +1180,7 @@
         "no_last_login": "沒有最後 UI 登入訊息",
         "no_record": "沒有紀錄",
         "open_logs": "開啟日誌",
-        "open_webmail_sso": "登入至網頁信箱",
+        "open_webmail_sso": "网络邮件",
         "password": "密碼",
         "password_now": "目前密碼 (確認更改)",
         "password_repeat": "密碼 (再次輸入)",
@@ -1233,7 +1266,9 @@
         "years": "年",
         "attribute": "屬性",
         "pushover_sound": "聲音",
-        "value": "數值"
+        "value": "數值",
+        "password_reset_info": "若無提供密碼備援電子信箱，此功能將無法使用。",
+        "pw_recovery_email": "密碼備援電子信箱"
     },
     "warning": {
         "cannot_delete_self": "不能刪除已登入的使用者",

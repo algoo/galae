@@ -1,5 +1,6 @@
-FROM debian:bullseye-slim
-LABEL maintainer "The Infrastructure Company GmbH <info@servercow.de>"
+FROM debian:bookworm-slim
+
+LABEL maintainer = "The Infrastructure Company GmbH <info@servercow.de>"
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV LC_ALL C
@@ -59,4 +60,4 @@ EXPOSE 588
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
-CMD exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]

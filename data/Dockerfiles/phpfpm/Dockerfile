@@ -1,18 +1,19 @@
-FROM php:8.2-fpm-alpine3.18
-LABEL maintainer "The Infrastructure Company GmbH <info@servercow.de>"
+FROM php:8.2-fpm-alpine3.21
+
+LABEL maintainer = "The Infrastructure Company GmbH <info@servercow.de>"
 
 # renovate: datasource=github-tags depName=krakjoe/apcu versioning=semver-coerced extractVersion=^v(?<version>.*)$
-ARG APCU_PECL_VERSION=5.1.23
+ARG APCU_PECL_VERSION=5.1.24
 # renovate: datasource=github-tags depName=Imagick/imagick versioning=semver-coerced extractVersion=(?<version>.*)$
-ARG IMAGICK_PECL_VERSION=3.7.0
+ARG IMAGICK_PECL_VERSION=3.8.0
 # renovate: datasource=github-tags depName=php/pecl-mail-mailparse versioning=semver-coerced extractVersion=^v(?<version>.*)$
-ARG MAILPARSE_PECL_VERSION=3.1.6
+ARG MAILPARSE_PECL_VERSION=3.1.8
 # renovate: datasource=github-tags depName=php-memcached-dev/php-memcached versioning=semver-coerced extractVersion=^v(?<version>.*)$
 ARG MEMCACHED_PECL_VERSION=3.2.0
 # renovate: datasource=github-tags depName=phpredis/phpredis versioning=semver-coerced extractVersion=(?<version>.*)$
-ARG REDIS_PECL_VERSION=6.0.2
+ARG REDIS_PECL_VERSION=6.1.0
 # renovate: datasource=github-tags depName=composer/composer versioning=semver-coerced extractVersion=(?<version>.*)$
-ARG COMPOSER_VERSION=2.6.6
+ARG COMPOSER_VERSION=2.8.6
 
 RUN apk add -U --no-cache autoconf \
   aspell-dev \
@@ -76,7 +77,7 @@ RUN apk add -U --no-cache autoconf \
     --with-webp \
     --with-xpm \
     --with-avif \
-  && docker-php-ext-install -j 4 exif gd gettext intl ldap opcache pcntl pdo pdo_mysql pspell soap sockets sysvsem zip bcmath gmp \
+  && docker-php-ext-install -j 4 exif gd gettext intl ldap opcache pcntl pdo pdo_mysql pspell soap sockets zip bcmath gmp \
   && docker-php-ext-configure imap --with-imap --with-imap-ssl \
   && docker-php-ext-install -j 4 imap \
   && curl --silent --show-error https://getcomposer.org/installer | php -- --version=${COMPOSER_VERSION} \

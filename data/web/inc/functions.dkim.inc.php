@@ -26,7 +26,7 @@ function dkim($_action, $_data = null, $privkey = false) {
           );
           continue;
         }
-        if (!ctype_alnum(str_replace(['-', '_'], '', $dkim_selector))) {
+        if (!ctype_alnum(str_replace(['-', '_', '.'], '', $dkim_selector))) {
           $_SESSION['return'][] = array(
             'type' => 'danger',
             'log' => array(__FUNCTION__, $_action, $_data),
@@ -188,7 +188,7 @@ function dkim($_action, $_data = null, $privkey = false) {
           return false;
         }
       }
-      if (!ctype_alnum($dkim_selector)) {
+      if (!ctype_alnum(str_replace(['-', '_', '.'], '', $dkim_selector))) {
         $_SESSION['return'][] = array(
           'type' => 'danger',
           'log' => array(__FUNCTION__, $_action, $_data),
@@ -240,8 +240,11 @@ function dkim($_action, $_data = null, $privkey = false) {
         if (strlen($dkimdata['pubkey']) < 391) {
           $dkimdata['length'] = "1024";
         }
-        elseif (strlen($dkimdata['pubkey']) < 736) {
+        elseif (strlen($dkimdata['pubkey']) < 564) {
           $dkimdata['length'] = "2048";
+        }
+        elseif (strlen($dkimdata['pubkey']) < 736) {
+          $dkimdata['length'] = "3072";
         }
         elseif (strlen($dkimdata['pubkey']) < 1416) {
           $dkimdata['length'] = "4096";

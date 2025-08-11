@@ -3,7 +3,7 @@ function customize($_action, $_item, $_data = null) {
 	global $redis;
 	global $lang;
   global $LOGO_LIMITS;
-  
+
   switch ($_action) {
     case 'add':
       // disable functionality when demo mode is enabled
@@ -122,10 +122,16 @@ function customize($_action, $_item, $_data = null) {
         case 'app_links':
           $apps = (array)$_data['app'];
           $links = (array)$_data['href'];
+          $user_links = (array)$_data['user_href'];
+          $hide = (array)$_data['hide'];
           $out = array();
-          if (count($apps) == count($links)) {
+          if (count($apps) == count($links) && count($apps) == count($user_links) && count($apps) == count($hide)) {
             for ($i = 0; $i < count($apps); $i++) {
-              $out[] = array($apps[$i] => $links[$i]);
+              $out[] = array($apps[$i] => array(
+                'link' => $links[$i],
+                'user_link' => $user_links[$i],
+                'hide' => ($hide[$i] === '0' || $hide[$i] === 0) ? false : true
+              ));
             }
             try {
               $redis->set('APP_LINKS', json_encode($out));
@@ -198,6 +204,35 @@ function customize($_action, $_item, $_data = null) {
             'msg' => 'ip_check_opt_in_modified'
           );
         break;
+        case 'custom_login':
+          $hide_user_quicklink        = ($_data['hide_user_quicklink'] == "1") ? 1 : 0;
+          $hide_domainadmin_quicklink = ($_data['hide_domainadmin_quicklink'] == "1") ? 1 : 0;
+          $hide_admin_quicklink       = ($_data['hide_admin_quicklink'] == "1") ? 1 : 0;
+          $force_sso                  = ($_data['force_sso'] == "1") ? 1 : 0;
+
+          $custom_login = array(
+            "hide_user_quicklink" => $hide_user_quicklink,
+            "hide_domainadmin_quicklink" => $hide_domainadmin_quicklink,
+            "hide_admin_quicklink" => $hide_admin_quicklink,
+            "force_sso" => $force_sso,
+          );
+          try {
+            $redis->set('CUSTOM_LOGIN', json_encode($custom_login));
+          }
+          catch (RedisException $e) {
+            $_SESSION['return'][] = array(
+              'type' => 'danger',
+              'log' => array(__FUNCTION__, $_action, $_item, $_data),
+              'msg' => array('redis_error', $e)
+            );
+            return false;
+          }
+          $_SESSION['return'][] = array(
+            'type' => 'success',
+            'log' => array(__FUNCTION__, $_action, $_item, $_data),
+            'msg' => 'custom_login_modified'
+          );
+        break;
       }
     break;
     case 'delete':
@@ -256,7 +291,23 @@ function customize($_action, $_item, $_data = null) {
             );
             return false;
           }
-          return ($app_links) ? $app_links : false;
+
+          if (empty($app_links)){
+            return false;
+          }
+
+          // convert from old style
+          foreach($app_links as $i => $entry){
+            foreach($entry as $app => $link){
+              if (empty($link['link']) && empty($link['user_link'])){
+                $app_links[$i][$app] = array();
+                $app_links[$i][$app]['link'] = $link;
+                $app_links[$i][$app]['user_link'] = $link;
+              }
+            }
+          }
+
+          return $app_links;
         break;
         case 'main_logo':
         case 'main_logo_dark':
@@ -325,6 +376,20 @@ function customize($_action, $_item, $_data = null) {
           try {
             $ip_check = ($ip_check = $redis->get('IP_CHECK')) ? $ip_check : 0;
             return $ip_check;
+          }
+          catch (RedisException $e) {
+            $_SESSION['return'][] = array(
+              'type' => 'danger',
+              'log' => array(__FUNCTION__, $_action, $_item, $_data),
+              'msg' => array('redis_error', $e)
+            );
+            return false;
+          }
+        break;
+        case 'custom_login':
+          try {
+            $custom_login = $redis->get('CUSTOM_LOGIN');
+            return $custom_login ? json_decode($custom_login, true) : array();
           }
           catch (RedisException $e) {
             $_SESSION['return'][] = array(

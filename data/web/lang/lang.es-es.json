@@ -24,7 +24,9 @@
         "protocol_access": "Cambiar protocolo de acceso",
         "quarantine_category": "Cambiar categoría de las notificaciones de cuarentena",
         "domain_relayhost": "Cambiar relayhost por un dominio",
-        "extend_sender_acl": "Permitir extender la ACL del remitente por direcciones externas"
+        "extend_sender_acl": "Permitir extender la ACL del remitente por direcciones externas",
+        "pw_reset": "Permitir el reset  de la contraseña del usario mailcow",
+        "sogo_access": "Permitir la gestión del acceso a SOGo"
     },
     "add": {
         "activate_filter_warn": "Todos los demás filtros se desactivarán cuando este filtro se active.",
@@ -95,7 +97,10 @@
         "app_password": "Añadir contraseña para la app",
         "public_comment": "Comentarios públicos",
         "disable_login": "Desactivar login (el correo entrante seguirá activo)",
-        "comment_info": "Los comentarios privados no son visibles al usuario, mientras que los comentarios públicos aparecerán sobre la información general del usuario"
+        "comment_info": "Los comentarios privados no son visibles al usuario, mientras que los comentarios públicos aparecerán sobre la información general del usuario",
+        "dry": "Simular la sincronización",
+        "private_comment": "Comentario privado",
+        "app_passwd_protocols": "Protocolos autorizados para la contraseña de la aplicación"
     },
     "admin": {
         "access": "Acceso",
@@ -346,12 +351,10 @@
         "log_info": "<p>Los <b>logs en memoria</b> son recopilados en listas de Redis y recortados a LOG_LINES (%d) cada minuto para prevenir sobrecarga en el sistema.\r\n  <br>Los logs en memoria no están destinados a ser persistentes. Todas las aplicaciones que logean a la memoria, también logean en el daemon de Docker y, por lo tanto, en el controlador de registro predeterminado.\r\n  El log en memoria se debe utilizar para analizar problemas menores con los contenedores.</p>\r\n  <p>Los <b>logs externos</b> se recopilan a través de la API de la aplicación dada.</p>\r\n  <p>Los <b>logs estáticos</b> son principalmente registros de actividad, que no están registrados en Dockerd pero que aún deben ser persistentes (excepto los registros de API).</p>",
         "logs": "Logs",
         "restart_container": "Reiniciar",
-        "solr_dead": "Solr está empezando, deshabilitado o caído.",
         "docs": "Docs",
         "last_modified": "Última modificación",
         "size": "Tamaño",
         "started_at": "Iniciado el",
-        "solr_status": "Solr status",
         "uptime": "Uptime",
         "static_logs": "Logs estáticos",
         "system_containers": "Sistema y Contenedores"
@@ -541,7 +544,7 @@
         "recipient_map": "Regla de destinatario",
         "recipient_map_info": "Las reglas de destinatarios se utilizan para reemplazar la dirección de destino en un mensaje antes de que se entregue.",
         "recipient_map_new": "Destinatario nuevo",
-        "recipient_map_new_info": "El destino de la regla debe ser una dirección de correo válida.",
+        "recipient_map_new_info": "El destino de la regla debe ser una dirección de correo electrónico válida o un nombre de dominio.",
         "recipient_map_old": "Destinatario original",
         "recipient_map_old_info": "El destino original de una regla de destinatario debe ser una dirección de correo electrónico válida o un nombre de dominio.",
         "recipient_maps": "Reglas de destinatario",
@@ -618,9 +621,7 @@
     },
     "start": {
         "help": "Mostrar/Ocultar panel de ayuda",
-        "imap_smtp_server_auth_info": "Por favor utiliza tu dirección de correo completa y el mecanismo de autenticación PLAIN.<br>\r\nTus datos para iniciar sesión serán cifrados por el cifrado obligatorio del servidor",
-        "mailcow_apps_detail": "Utiliza una aplicación de mailcow para acceder a tus correos, calendario, contactos y más.",
-        "mailcow_panel_detail": "<b>Administradores por dominio</b> pueden crear, modificar o eliminar buzones y alias, modificar los dominios asignados y ver información más detallada sobre los dominios asignados<br>\r\n\t<b>Usuarios de buzón</b> son capaces de crear alias de tiempo limitado (spam alias), cambiar su contraseña y la configuración del filtro de spam del buzón."
+        "imap_smtp_server_auth_info": "Por favor utiliza tu dirección de correo completa y el mecanismo de autenticación PLAIN.<br>\r\nTus datos para iniciar sesión serán cifrados por el cifrado obligatorio del servidor"
     },
     "success": {
         "acl_saved": "ACL para el objeto %s guardado",
@@ -709,6 +710,7 @@
         "create_syncjob": "Crear nuevo trabajo de sincronización",
         "daily": "Cada día",
         "day": "Día",
+        "description": "Descripción",
         "direct_aliases": "Alias directos",
         "direct_aliases_desc": "Los alias directos se ven afectadas por el filtro de correo no deseado y la configuración de la política TLS del usuario.",
         "eas_reset": "Resetear el caché ActiveSync",

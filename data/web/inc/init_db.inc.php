@@ -1,9 +1,10 @@
 <?php
-function init_db_schema() {
+function init_db_schema()
+{
   try {
     global $pdo;
 
-    $db_version = "26022024_1433";
+    $db_version = "27012025_1555";
 
     $stmt = $pdo->query("SHOW TABLES LIKE 'versions'");
     $num_results = count($stmt->fetchAll(PDO::FETCH_ASSOC));
@@ -111,6 +112,10 @@ function init_db_schema() {
           "c_name" => "VARCHAR(255) NOT NULL",
           "c_password" => "VARCHAR(255) NOT NULL DEFAULT ''",
           "c_cn" => "VARCHAR(255)",
+          "c_l" => "VARCHAR(255)",
+          "c_o" => "VARCHAR(255)",
+          "c_ou" => "VARCHAR(255)",
+          "c_telephonenumber" => "VARCHAR(255)",
           "mail" => "VARCHAR(255) NOT NULL",
           // TODO -> use TEXT and check if SOGo login breaks on empty aliases
           "aliases" => "TEXT NOT NULL",
@@ -365,6 +370,7 @@ function init_db_schema() {
           "custom_attributes" => "JSON NOT NULL DEFAULT ('{}')",
           "kind" => "VARCHAR(100) NOT NULL DEFAULT ''",
           "multiple_bookings" => "INT NOT NULL DEFAULT -1",
+          "authsource" => "ENUM('mailcow', 'keycloak', 'generic-oidc', 'ldap') DEFAULT 'mailcow'",
           "created" => "DATETIME(0) NOT NULL DEFAULT NOW(0)",
           "modified" => "DATETIME ON UPDATE CURRENT_TIMESTAMP",
           "active" => "TINYINT(1) NOT NULL DEFAULT '1'"
@@ -485,7 +491,8 @@ function init_db_schema() {
           "quarantine_notification" => "TINYINT(1) NOT NULL DEFAULT '1'",
           "quarantine_category" => "TINYINT(1) NOT NULL DEFAULT '1'",
           "app_passwds" => "TINYINT(1) NOT NULL DEFAULT '1'",
-          ),
+          "pw_reset" => "TINYINT(1) NOT NULL DEFAULT '1'",
+        ),
         "keys" => array(
           "primary" => array(
             "" => array("username")
@@ -524,6 +531,7 @@ function init_db_schema() {
         "cols" => array(
           "address" => "VARCHAR(255) NOT NULL",
           "goto" => "TEXT NOT NULL",
+          "description" => "TEXT NOT NULL",
           "created" => "DATETIME(0) NOT NULL DEFAULT NOW(0)",
           "modified" => "DATETIME ON UPDATE CURRENT_TIMESTAMP",
           "validity" => "INT(11)"
@@ -566,6 +574,20 @@ function init_db_schema() {
         "keys" => array(
           "primary" => array(
             "" => array("id")
+          )
+        ),
+        "attr" => "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
+      ),
+      "identity_provider" => array(
+        "cols" => array(
+          "key" => "VARCHAR(255) NOT NULL",
+          "value" => "TEXT NOT NULL",
+          "created" => "DATETIME(0) NOT NULL DEFAULT NOW(0)",
+          "modified" => "DATETIME ON UPDATE CURRENT_TIMESTAMP"
+        ),
+        "keys" => array(
+          "primary" => array(
+            "" => array("key")
           )
         ),
         "attr" => "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
@@ -675,7 +697,7 @@ function init_db_schema() {
           "mailbox_relayhost" => "TINYINT(1) NOT NULL DEFAULT '1'",
           "domain_relayhost" => "TINYINT(1) NOT NULL DEFAULT '1'",
           "domain_desc" => "TINYINT(1) NOT NULL DEFAULT '0'"
-          ),
+        ),
         "keys" => array(
           "primary" => array(
             "" => array("username")
@@ -684,6 +706,19 @@ function init_db_schema() {
         "attr" => "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
       ),
       "da_sso" => array(
+        "cols" => array(
+          "username" => "VARCHAR(255) NOT NULL",
+          "token" => "VARCHAR(255) NOT NULL",
+          "created" => "DATETIME(0) NOT NULL DEFAULT NOW(0)",
+        ),
+        "keys" => array(
+          "primary" => array(
+            "" => array("token", "created")
+          ),
+        ),
+        "attr" => "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
+      ),
+      "reset_password" => array(
         "cols" => array(
           "username" => "VARCHAR(255) NOT NULL",
           "token" => "VARCHAR(255) NOT NULL",
@@ -992,7 +1027,7 @@ function init_db_schema() {
           )
         ),
         "attr" => "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
-      ),      
+      ),
       "pushover" => array(
         "cols" => array(
           "username" => "VARCHAR(255) NOT NULL",
@@ -1135,7 +1170,7 @@ function init_db_schema() {
         while ($row = array_shift($rows)) {
           $pdo->query($row['FKEY_DROP']);
         }
-        foreach($properties['cols'] as $column => $type) {
+        foreach ($properties['cols'] as $column => $type) {
           $stmt = $pdo->query("SHOW COLUMNS FROM `" . $table . "` LIKE '" . $column . "'");
           $num_results = count($stmt->fetchAll(PDO::FETCH_ASSOC));
           if ($num_results == 0) {
@@ -1149,12 +1184,11 @@ function init_db_schema() {
               }
             }
             $pdo->query("ALTER TABLE `" . $table . "` ADD `" . $column . "` " . $type);
-          }
-          else {
+          } else {
             $pdo->query("ALTER TABLE `" . $table . "` MODIFY COLUMN `" . $column . "` " . $type);
           }
         }
-        foreach($properties['keys'] as $key_type => $key_content) {
+        foreach ($properties['keys'] as $key_type => $key_content) {
           if (strtolower($key_type) == 'primary') {
             foreach ($key_content as $key_values) {
               $fields = "`" . implode("`, `", $key_values) . "`";
@@ -1211,18 +1245,18 @@ function init_db_schema() {
         $keys_to_exist = array();
         if (isset($properties['keys']['unique']) && is_array($properties['keys']['unique'])) {
           foreach ($properties['keys']['unique'] as $key_name => $key_values) {
-             $keys_to_exist[] = $key_name;
+            $keys_to_exist[] = $key_name;
           }
         }
         if (isset($properties['keys']['key']) && is_array($properties['keys']['key'])) {
           foreach ($properties['keys']['key'] as $key_name => $key_values) {
-             $keys_to_exist[] = $key_name;
+            $keys_to_exist[] = $key_name;
           }
         }
         // Index for foreign key must exist
         if (isset($properties['keys']['fkey']) && is_array($properties['keys']['fkey'])) {
           foreach ($properties['keys']['fkey'] as $key_name => $key_values) {
-             $keys_to_exist[] = $key_name;
+            $keys_to_exist[] = $key_name;
           }
         }
         // Step 2: Drop all vanished indexes
@@ -1239,33 +1273,29 @@ function init_db_schema() {
             $pdo->query("ALTER TABLE `" . $table . "` DROP PRIMARY KEY");
           }
         }
-      }
-      else {
+      } else {
         // Create table if it is missing
         $sql = "CREATE TABLE IF NOT EXISTS `" . $table . "` (";
-        foreach($properties['cols'] as $column => $type) {
+        foreach ($properties['cols'] as $column => $type) {
           $sql .= "`" . $column . "` " . $type . ",";
         }
-        foreach($properties['keys'] as $key_type => $key_content) {
+        foreach ($properties['keys'] as $key_type => $key_content) {
           if (strtolower($key_type) == 'primary') {
             foreach ($key_content as $key_values) {
               $fields = "`" . implode("`, `", $key_values) . "`";
               $sql .= "PRIMARY KEY (" . $fields . ")" . ",";
             }
-          }
-          elseif (strtolower($key_type) == 'key') {
+          } elseif (strtolower($key_type) == 'key') {
             foreach ($key_content as $key_name => $key_values) {
               $fields = "`" . implode("`, `", $key_values) . "`";
               $sql .= "KEY `" . $key_name . "` (" . $fields . ")" . ",";
             }
-          }
-          elseif (strtolower($key_type) == 'unique') {
+          } elseif (strtolower($key_type) == 'unique') {
             foreach ($key_content as $key_name => $key_values) {
               $fields = "`" . implode("`, `", $key_values) . "`";
               $sql .= "UNIQUE KEY `" . $key_name . "` (" . $fields . ")" . ",";
             }
-          }
-          elseif (strtolower($key_type) == 'fkey') {
+          } elseif (strtolower($key_type) == 'fkey') {
             foreach ($key_content as $key_name => $key_values) {
               @list($table_ref, $field_ref) = explode('.', $key_values['ref']);
               $sql .= "FOREIGN KEY `" . $key_name . "` (" . $key_values['col'] . ") REFERENCES `" . $table_ref . "` (`" . $field_ref . "`)
@@ -1279,7 +1309,6 @@ function init_db_schema() {
       }
       // Reset table attributes
       $pdo->query("ALTER TABLE `" . $table . "` " . $properties['attr'] . ";");
-
     }
 
     // Recreate SQL views
@@ -1306,12 +1335,12 @@ function init_db_schema() {
     $stmt = $pdo->query("SELECT NULL FROM `admin`");
     $num_results = count($stmt->fetchAll(PDO::FETCH_ASSOC));
     if ($num_results == 0) {
-    $pdo->query("INSERT INTO `admin` (`username`, `password`, `superadmin`, `created`, `modified`, `active`)
+      $pdo->query("INSERT INTO `admin` (`username`, `password`, `superadmin`, `created`, `modified`, `active`)
       VALUES ('admin', '{SSHA256}K8eVJ6YsZbQCfuJvSUbaQRLr0HPLz5rC9IAp0PAFl0tmNDBkMDc0NDAyOTAxN2Rk', 1, NOW(), NOW(), 1)");
-    $pdo->query("INSERT INTO `domain_admins` (`username`, `domain`, `created`, `active`)
+      $pdo->query("INSERT INTO `domain_admins` (`username`, `domain`, `created`, `active`)
         SELECT `username`, 'ALL', NOW(), 1 FROM `admin`
           WHERE superadmin='1' AND `username` NOT IN (SELECT `username` FROM `domain_admins`);");
-    $pdo->query("DELETE FROM `admin` WHERE `username` NOT IN  (SELECT `username` FROM `domain_admins`);");
+      $pdo->query("DELETE FROM `admin` WHERE `username` NOT IN  (SELECT `username` FROM `domain_admins`);");
     }
     // Insert new DB schema version
     $pdo->query("REPLACE INTO `versions` (`application`, `version`) VALUES ('db_schema', '" . $db_version . "');");
@@ -1339,7 +1368,7 @@ function init_db_schema() {
     $pdo->query("UPDATE `mailbox` SET `attributes` =  JSON_SET(`attributes`, '$.mailbox_format', \"maildir:\") WHERE JSON_VALUE(`attributes`, '$.mailbox_format') IS NULL;");
     $pdo->query("UPDATE `mailbox` SET `attributes` =  JSON_SET(`attributes`, '$.quarantine_notification', \"never\") WHERE JSON_VALUE(`attributes`, '$.quarantine_notification') IS NULL;");
     $pdo->query("UPDATE `mailbox` SET `attributes` =  JSON_SET(`attributes`, '$.quarantine_category', \"reject\") WHERE JSON_VALUE(`attributes`, '$.quarantine_category') IS NULL;");
-    foreach($tls_options as $tls_user => $tls_options) {
+    foreach ($tls_options as $tls_user => $tls_options) {
       $stmt = $pdo->prepare("UPDATE `mailbox` SET `attributes` = JSON_SET(`attributes`, '$.tls_enforce_in', :tls_enforce_in),
         `attributes` = JSON_SET(`attributes`, '$.tls_enforce_out', :tls_enforce_out)
           WHERE `username` = :username");
@@ -1376,7 +1405,7 @@ function init_db_schema() {
         "key_size" => 2048,
         "max_quota_for_domain" => 10240 * 1048576,
       )
-    );     
+    );
     $default_mailbox_template = array(
       "template" => "Default",
       "type" => "mailbox",
@@ -1411,37 +1440,40 @@ function init_db_schema() {
         "acl_quarantine_category" => 1,
         "acl_app_passwds" => 1,
       )
-    );        
+    );
     $stmt = $pdo->prepare("SELECT id FROM `templates` WHERE `type` = :type AND `template` = :template");
     $stmt->execute(array(
       ":type" => "domain",
       ":template" => $default_domain_template["template"]
     ));
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (empty($row)){
+    if (empty($row)) {
       $stmt = $pdo->prepare("INSERT INTO `templates` (`type`, `template`, `attributes`)
         VALUES (:type, :template, :attributes)");
       $stmt->execute(array(
         ":type" => "domain",
         ":template" => $default_domain_template["template"],
         ":attributes" => json_encode($default_domain_template["attributes"])
-      )); 
-    }    
+      ));
+    }
     $stmt = $pdo->prepare("SELECT id FROM `templates` WHERE `type` = :type AND `template` = :template");
     $stmt->execute(array(
       ":type" => "mailbox",
       ":template" => $default_mailbox_template["template"]
     ));
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (empty($row)){
+    if (empty($row)) {
       $stmt = $pdo->prepare("INSERT INTO `templates` (`type`, `template`, `attributes`)
         VALUES (:type, :template, :attributes)");
       $stmt->execute(array(
         ":type" => "mailbox",
         ":template" => $default_mailbox_template["template"],
         ":attributes" => json_encode($default_mailbox_template["attributes"])
-      )); 
-    } 
+      ));
+    }
+
+    // remove old sogo views and triggers
+    $pdo->query("DROP TRIGGER IF EXISTS sogo_update_password");
 
     if (php_sapi_name() == "cli") {
       echo "DB initialization completed" . PHP_EOL;
@@ -1452,8 +1484,7 @@ function init_db_schema() {
         'msg' => 'db_init_complete'
       );
     }
-  }
-  catch (PDOException $e) {
+  } catch (PDOException $e) {
     if (php_sapi_name() == "cli") {
       echo "DB initialization failed: " . print_r($e, true) . PHP_EOL;
     } else {
@@ -1467,6 +1498,7 @@ function init_db_schema() {
 }
 if (php_sapi_name() == "cli") {
   include '/web/inc/vars.inc.php';
+  include '/web/inc/functions.inc.php';
   include '/web/inc/functions.docker.inc.php';
   // $now = new DateTime();
   // $mins = $now->getOffset() / 60;
@@ -1488,12 +1520,9 @@ if (php_sapi_name() == "cli") {
   if (intval($res['OK_C']) === 2) {
     // Be more precise when replacing into _sogo_static_view, col orders may change
     try {
-      $stmt = $pdo->query("REPLACE INTO _sogo_static_view (`c_uid`, `domain`, `c_name`, `c_password`, `c_cn`, `mail`, `aliases`, `ad_aliases`, `ext_acl`, `kind`, `multiple_bookings`)
-        SELECT `c_uid`, `domain`, `c_name`, `c_password`, `c_cn`, `mail`, `aliases`, `ad_aliases`, `ext_acl`, `kind`, `multiple_bookings` from sogo_view");
-      $stmt = $pdo->query("DELETE FROM _sogo_static_view WHERE `c_uid` NOT IN (SELECT `username` FROM `mailbox` WHERE `active` = '1');");
+      update_sogo_static_view();
       echo "Fixed _sogo_static_view" . PHP_EOL;
-    }
-    catch ( Exception $e ) {
+    } catch (Exception $e) {
       // Dunno
     }
   }
@@ -1501,9 +1530,8 @@ if (php_sapi_name() == "cli") {
     $m = new Memcached();
     $m->addServer('memcached', 11211);
     $m->flush();
-    echo "Cleaned up memcached". PHP_EOL;
-  }
-  catch ( Exception $e ) {
+    echo "Cleaned up memcached" . PHP_EOL;
+  } catch (Exception $e) {
     // Dunno
   }
   init_db_schema();

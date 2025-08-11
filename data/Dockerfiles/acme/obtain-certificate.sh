@@ -93,8 +93,8 @@ until dig letsencrypt.org +time=3 +tries=1 @unbound > /dev/null; do
   sleep 2
 done
 log_f "Resolver OK"
-log_f "Using command acme-tiny ${DIRECTORY_URL} ${ACME_CONTACT_PARAMETER} --account-key ${ACME_BASE}/acme/account.pem --disable-check --csr ${CSR} --acme-dir /var/www/acme/"
-ACME_RESPONSE=$(acme-tiny ${DIRECTORY_URL} ${ACME_CONTACT_PARAMETER} \
+log_f "Using command acme-tiny ${DIRECTORY_URL} --account-key ${ACME_BASE}/acme/account.pem --disable-check --csr ${CSR} --acme-dir /var/www/acme/"
+ACME_RESPONSE=$(acme-tiny ${DIRECTORY_URL} \
   --account-key ${ACME_BASE}/acme/account.pem \
   --disable-check \
   --csr ${CSR} \
@@ -124,7 +124,7 @@ case "$SUCCESS" in
     ;;
   *) # non-zero is non-fun
     log_f "Failed to obtain certificate ${CERT} for domains '${CERT_DOMAINS[*]}'"
-    redis-cli -h redis SET ACME_FAIL_TIME "$(date +%s)"
+    redis-cli -h redis -a ${REDISPASS} --no-auth-warning SET ACME_FAIL_TIME "$(date +%s)"
     exit 100${SUCCESS}
     ;;
 esac

@@ -1,4 +1,3 @@
-version: '2.1'
 services:
   unbound-mailcow:
     build: ./data/Dockerfiles/unbound
@@ -34,9 +33,6 @@ services:
 
   dockerapi-mailcow:
     build: ./data/Dockerfiles/dockerapi
-
-  solr-mailcow:
-    build: ./data/Dockerfiles/solr
 
   olefy-mailcow:
     build: ./data/Dockerfiles/olefy

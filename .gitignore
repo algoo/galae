@@ -23,6 +23,7 @@ data/conf/dovecot/sni.conf
 data/conf/dovecot/sogo-sso.conf
 data/conf/dovecot/sogo_trusted_ip.conf
 data/conf/dovecot/sql
+data/conf/dovecot/conf.d/fts.conf
 data/conf/nextcloud-*.bak
 data/conf/nginx/*.active
 data/conf/nginx/*.bak
@@ -44,8 +45,12 @@ data/conf/rspamd/local.d/*
 data/conf/rspamd/override.d/*
 data/conf/sogo/custom-theme.js
 data/conf/sogo/plist_ldap
+data/conf/sogo/plist_ldap.sh
 data/conf/sogo/sieve.creds
-data/conf/sogo/sogo-full.svg
+data/conf/sogo/cron.creds
+data/conf/sogo/custom-fulllogo.svg
+data/conf/sogo/custom-shortlogo.svg
+data/conf/sogo/custom-fulllogo.png
 data/gitea/
 data/gogs/
 data/hooks/dovecot/*
@@ -69,3 +74,4 @@ rebuild-images.sh
 refresh_images.sh
 update_diffs/
 create_cold_standby.sh
+!data/conf/nginx/mailcow_auth.conf

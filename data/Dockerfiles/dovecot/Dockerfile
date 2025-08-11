@@ -1,11 +1,12 @@
-FROM alpine:3.19
-LABEL maintainer "The Infrastructure Company GmbH <info@servercow.de>"
+FROM alpine:3.21
+
+LABEL maintainer="The Infrastructure Company GmbH <info@servercow.de>"
 
 # renovate: datasource=github-releases depName=tianon/gosu versioning=semver-coerced extractVersion=^(?<version>.*)$
 ARG GOSU_VERSION=1.16
 
-ENV LANG C.UTF-8
-ENV LC_ALL C.UTF-8
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
 
 # Add groups and users before installing Dovecot to not break compatibility
 RUN addgroup -g 5000 vmail \
@@ -24,6 +25,7 @@ RUN addgroup -g 5000 vmail \
   envsubst \
   ca-certificates \
   curl \
+  coreutils \
   jq \
   lua \
   lua-cjson \
@@ -32,9 +34,13 @@ RUN addgroup -g 5000 vmail \
   lua5.3-sql-mysql \
   icu-data-full \
   mariadb-connector-c \
+  lua-sec \
+  mariadb-dev \
+  glib-dev \
   gcompat \
   mariadb-client \
   perl \
+  perl-dev \
   perl-ntlm \
   perl-cgi \
   perl-crypt-openssl-rsa \
@@ -62,8 +68,8 @@ RUN addgroup -g 5000 vmail \
   perl-package-stash-xs \
   perl-par-packer \
   perl-parse-recdescent \
-  perl-lockfile-simple --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community/ \
-  libproc \
+  perl-lockfile-simple \
+  libproc2 \
   perl-readonly \
   perl-regexp-common \
   perl-sys-meminfo \
@@ -103,13 +109,11 @@ RUN addgroup -g 5000 vmail \
   dovecot-submissiond \
   dovecot-pigeonhole-plugin \
   dovecot-pop3d \
-  dovecot-fts-solr \
+  dovecot-fts-flatcurve \
   && arch=$(arch | sed s/aarch64/arm64/ | sed s/x86_64/amd64/) \
   && wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$arch" \
   && chmod +x /usr/local/bin/gosu \
   && gosu nobody true
-
-# RUN cpan LockFile::Simple
 
 COPY trim_logs.sh /usr/local/bin/trim_logs.sh
 COPY clean_q_aged.sh /usr/local/bin/clean_q_aged.sh
@@ -129,6 +133,7 @@ COPY stop-supervisor.sh /usr/local/sbin/stop-supervisor.sh
 COPY quarantine_notify.py /usr/local/bin/quarantine_notify.py
 COPY quota_notify.py /usr/local/bin/quota_notify.py
 COPY repl_health.sh /usr/local/bin/repl_health.sh
+COPY optimize-fts.sh /usr/local/bin/optimize-fts.sh
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]

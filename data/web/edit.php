@@ -131,7 +131,8 @@ if (isset($_SESSION['mailcow_cc_role'])) {
           'rlyhosts' => $rlyhosts,
           'sender_acl_handles' => mailbox('get', 'sender_acl_handles', $mailbox),
           'user_acls' => acl('get', 'user', $mailbox),
-          'mailbox_details' => $result
+          'mailbox_details' => $result,
+          'iam_settings' => $iam_settings,
         ];
       }
     }
@@ -165,6 +166,9 @@ if (isset($_SESSION['mailcow_cc_role'])) {
         $result = recipient_map('details', $map);
         if (substr($result['recipient_map_old'], 0, 1) == '@') {
           $result['recipient_map_old'] = substr($result['recipient_map_old'], 1);
+        }
+        if (substr($result['recipient_map_new'], 0, 1) == '@') {
+          $result['recipient_map_new'] = substr($result['recipient_map_new'], 1);
         }
         $template = 'edit/recipient_map.twig';
         $template_data = ['map' => $map];

@@ -5,7 +5,7 @@ trap "postfix stop" EXIT
 [[ ! -d /opt/postfix/conf/sql/ ]] && mkdir -p /opt/postfix/conf/sql/
 
 # Wait for MySQL to warm-up
-while ! mysqladmin status --host=${DBHOST} --port=${DBPORT} -u${DBUSER} -p${DBPASS} --silent; do
+while ! mariadb-admin status --ssl=false --host=${DBHOST} --port=${DBPORT} -u${DBUSER} -p${DBPASS} --silent; do
   echo "Waiting for database to come up..."
   sleep 2
 done
@@ -409,7 +409,7 @@ EOF
 
 if [ ! -f /opt/postfix/conf/dns_blocklists.cf ]; then
   cat <<EOF > /opt/postfix/conf/dns_blocklists.cf
-# This file can be edited. 
+# This file can be edited.
 # Delete this file and restart postfix container to revert any changes.
 postscreen_dnsbl_sites = wl.mailspike.net=127.0.0.[18;19;20]*-2
   hostkarma.junkemailfilter.com=127.0.0.1*-2
@@ -417,7 +417,6 @@ postscreen_dnsbl_sites = wl.mailspike.net=127.0.0.[18;19;20]*-2
   list.dnswl.org=127.0.[0..255].1*-4
   list.dnswl.org=127.0.[0..255].2*-6
   list.dnswl.org=127.0.[0..255].3*-8
-  ix.dnsbl.manitu.net*2
   bl.spamcop.net*2
   bl.suomispam.net*2
   hostkarma.junkemailfilter.com=127.0.0.2*3
@@ -429,14 +428,12 @@ postscreen_dnsbl_sites = wl.mailspike.net=127.0.0.[18;19;20]*-2
   b.barracudacentral.org=127.0.0.2*7
   bl.mailspike.net=127.0.0.2*5
   bl.mailspike.net=127.0.0.[10;11;12]*4
-  dnsbl.sorbs.net=127.0.0.10*8
-  dnsbl.sorbs.net=127.0.0.5*6
-  dnsbl.sorbs.net=127.0.0.7*3
-  dnsbl.sorbs.net=127.0.0.8*2
-  dnsbl.sorbs.net=127.0.0.6*2
-  dnsbl.sorbs.net=127.0.0.9*2
 EOF
 fi
+
+# Remove discontinued DNSBLs from existing dns_blocklists.cf
+sed -i '/ix\.dnsbl\.manitu\.net\*2/d' /opt/postfix/conf/dns_blocklists.cf # Nixspam
+
 DNSBL_CONFIG=$(grep -v '^#' /opt/postfix/conf/dns_blocklists.cf | grep '\S')
 
 if [ ! -z "$DNSBL_CONFIG" ]; then
@@ -526,6 +523,11 @@ chmod 640 /opt/postfix/conf/sql/*.cf /opt/postfix/conf/custom_transport.pcre
 chgrp -R postdrop /var/spool/postfix/public
 chgrp -R postdrop /var/spool/postfix/maildrop
 postfix set-permissions
+
+# Checking if there is a leftover of a crashed postfix container before starting a new one
+if [ -e /var/spool/postfix/pid/master.pid ]; then
+  rm -rf /var/spool/postfix/pid/master.pid
+fi
 
 # Check Postfix configuration
 postconf -c /opt/postfix/conf > /dev/null

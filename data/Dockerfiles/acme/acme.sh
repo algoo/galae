@@ -4,9 +4,9 @@ exec 5>&1
 
 # Do not attempt to write to slave
 if [[ ! -z ${REDIS_SLAVEOF_IP} ]]; then
-  export REDIS_CMDLINE="redis-cli -h ${REDIS_SLAVEOF_IP} -p ${REDIS_SLAVEOF_PORT}"
+  export REDIS_CMDLINE="redis-cli -h ${REDIS_SLAVEOF_IP} -p ${REDIS_SLAVEOF_PORT} -a ${REDISPASS} --no-auth-warning"
 else
-  export REDIS_CMDLINE="redis-cli -h redis -p 6379"
+  export REDIS_CMDLINE="redis-cli -h redis -p 6379 -a ${REDISPASS} --no-auth-warning"
 fi
 
 until [[ $(${REDIS_CMDLINE} PING) == "PONG" ]]; do
@@ -31,6 +31,10 @@ fi
 # Request certificate for MAILCOW_HOSTNAME only
 if [[ "${ONLY_MAILCOW_HOSTNAME}" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
   ONLY_MAILCOW_HOSTNAME=y
+fi
+
+if [[ "${AUTODISCOVER_SAN}" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
+  AUTODISCOVER_SAN=y
 fi
 
 # Request individual certificate for every domain
@@ -113,13 +117,13 @@ fi
 chmod 600 ${ACME_BASE}/key.pem
 
 log_f "Waiting for database..."
-while ! mysqladmin status --host=${DBHOST} --port=${DBPORT} -u${DBUSER} -p${DBPASS} --silent > /dev/null; do
+while ! /usr/bin/mariadb-admin status --ssl=false --host=${DBHOST} --port=${DBPORT} -u${DBUSER} -p${DBPASS} --silent > /dev/null; do
   sleep 2
 done
 log_f "Database OK"
 
 log_f "Waiting for Nginx..."
-until $(curl --output /dev/null --silent --head --fail http://nginx:8081); do
+until $(curl --output /dev/null --silent --head --fail http://nginx.${COMPOSE_PROJECT_NAME}_mailcow-network:8081); do
   sleep 2
 done
 log_f "Nginx OK"
@@ -133,8 +137,8 @@ log_f "Resolver OK"
 # Waiting for domain table
 log_f "Waiting for domain table..."
 while [[ -z ${DOMAIN_TABLE} ]]; do
-  curl --silent http://nginx/ >/dev/null 2>&1
-  DOMAIN_TABLE=$(mysql --host=${DBHOST} --port=${DBPORT} -u ${DBUSER} -p${DBPASS} ${DBNAME} -e "SHOW TABLES LIKE 'domain'" -Bs)
+  curl --silent http://nginx.${COMPOSE_PROJECT_NAME}_mailcow-network/ >/dev/null 2>&1
+  DOMAIN_TABLE=$(mariadb --skip-ssl --host=${DBHOST} --port=${DBPORT} -u ${DBUSER} -p${DBPASS} ${DBNAME} -e "SHOW TABLES LIKE 'domain'" -Bs)
   [[ -z ${DOMAIN_TABLE} ]] && sleep 10
 done
 log_f "OK" no_date
@@ -155,18 +159,6 @@ while true; do
   fi
   if [[ ! -f ${ACME_BASE}/acme/account.pem ]]; then
     log_f "Generating missing Lets Encrypt account key..."
-    if [[ ! -z ${ACME_CONTACT} ]]; then
-      if ! verify_email "${ACME_CONTACT}"; then
-        log_f "Invalid email address, will not start registration!"
-        sleep 365d
-        exec $(readlink -f "$0")
-      else
-        ACME_CONTACT_PARAMETER="--contact mailto:${ACME_CONTACT}"
-        log_f "Valid email address, using ${ACME_CONTACT} for registration"
-      fi
-    else
-      ACME_CONTACT_PARAMETER=""
-    fi
     openssl genrsa 4096 > ${ACME_BASE}/acme/account.pem
   else
     log_f "Using existing Lets Encrypt account key ${ACME_BASE}/acme/account.pem"
@@ -211,7 +203,11 @@ while true; do
       ADDITIONAL_SAN_ARR+=($i)
     fi
   done
+
+  if [[ ${AUTODISCOVER_SAN} == "y" ]]; then
+  # Fetch certs for autoconfig and autodiscover subdomains
   ADDITIONAL_WC_ARR+=('autodiscover' 'autoconfig')
+  fi
 
   if [[ ${SKIP_IP_CHECK} != "y" ]]; then
   # Start IP detection
@@ -223,7 +219,7 @@ while true; do
 
   #########################################
   # IP and webroot challenge verification #
-  SQL_DOMAINS=$(mysql --host=${DBHOST} --port=${DBPORT} -u ${DBUSER} -p${DBPASS} ${DBNAME} -e "SELECT domain FROM domain WHERE backupmx=0 and active=1" -Bs)
+  SQL_DOMAINS=$(mariadb --skip-ssl --host=${DBHOST} --port=${DBPORT} -u ${DBUSER} -p${DBPASS} ${DBNAME} -e "SELECT domain FROM domain WHERE backupmx=0 and active=1" -Bs)
   if [[ ! $? -eq 0 ]]; then
     log_f "Failed to read SQL domains, retrying in 1 minute..."
     sleep 1m
@@ -291,7 +287,7 @@ while true; do
     VALIDATED_CERTIFICATES+=("${CERT_NAME}")
 
     # obtain server certificate if required
-    ACME_CONTACT_PARAMETER=${ACME_CONTACT_PARAMETER} DOMAINS=${SERVER_SAN_VALIDATED[@]} /srv/obtain-certificate.sh rsa
+    DOMAINS=${SERVER_SAN_VALIDATED[@]} /srv/obtain-certificate.sh rsa
     RETURN="$?"
     if [[ "$RETURN" == "0" ]]; then # 0 = cert created successfully
       CERT_AMOUNT_CHANGED=1

@@ -179,9 +179,8 @@ $(document).ready(function() {
     // Get script_data textarea content from form the button was clicked in
     var script = $('textarea[name="script_data"]', $(this).parents('form:first')).val();
     $.ajax({
-      dataType: 'json',
       url: "/inc/ajax/sieve_validation.php",
-      type: "get",
+      type: "post",
       data: { script: script },
       complete: function(data) {
         var response = (data.responseText);
@@ -380,6 +379,9 @@ $(document).ready(function() {
     if (template.acl_app_passwds == 1){
       acl.push("app_passwds");
     }
+    if (template.acl_pw_reset == 1){
+      acl.push("pw_reset");
+    }
     $('#user_acl').selectpicker('val', acl);
 
     $('#rl_value').val(template.rl_value);
@@ -387,7 +389,6 @@ $(document).ready(function() {
       $('#rl_frame').selectpicker('val', template.rl_frame);
     }
 
-    console.log(template.active)
     if (template.active){
       $('#mbox_active').selectpicker('val', template.active.toString());
     } else {
@@ -698,8 +699,8 @@ jQuery(function($){
             } else if (item.attributes.rl_frame === "d"){
               item.attributes.rl_frame = lang_rl.day;
             }
-            item.attributes.rl_value = escapeHtml(item.attributes.rl_value);
-
+            item.attributes.rl_value = (!item.attributes.rl_value) ? "∞" : escapeHtml(item.attributes.rl_value);
+            item.attributes.ratelimit = item.attributes.rl_value + " " + item.attributes.rl_frame;
 
             if (item.template.toLowerCase() == "default"){
               item.action = '<div class="btn-group">' +
@@ -823,14 +824,8 @@ jQuery(function($){
           }
         },
         {
-          title: 'rl_frame',
-          data: 'attributes.rl_frame',
-          defaultContent: '',
-          class: 'none',
-        },
-        {
-          title: 'rl_value',
-          data: 'attributes.rl_value',
+          title: lang_edit.ratelimit,
+          data: 'attributes.ratelimit',
           defaultContent: '',
           class: 'none',
         },
@@ -899,7 +894,10 @@ jQuery(function($){
             item.quota.value = humanFileSize(item.quota_used) + "/" + item.quota.value;
 
             item.max_quota_for_mbox = humanFileSize(item.max_quota_for_mbox);
-            item.last_mail_login = item.last_imap_login + '/' + item.last_pop3_login + '/' + item.last_smtp_login;
+            item.last_mail_login = (item.attributes.imap_access == 1 ? '<div class="text-start badge bg-info mb-2" style="min-width: 70px;">IMAP @ ' + unix_time_format(Number(item.last_imap_login)) + '</div><br>' : '') +
+                                   (item.attributes.pop3_access == 1 ? '<div class="text-start badge bg-info mb-2" style="min-width: 70px;">POP3 @ ' + unix_time_format(Number(item.last_pop3_login)) + '</div><br>' : '') +
+                                   (item.attributes.smtp_access == 1 ? '<div class="text-start badge bg-info mb-2" style="min-width: 70px;">SMTP @ ' + unix_time_format(Number(item.last_smtp_login)) + '</div><br>' : '') +
+                                   '<div class="text-start badge bg-info" style="min-width: 70px;">SSO @ ' + unix_time_format(Number(item.last_sso_login)) + '</div>';
             /*
             if (!item.rl) {
               item.rl = '∞';
@@ -948,7 +946,7 @@ jQuery(function($){
               '<a href="#" data-action="delete_selected" data-id="single-mailbox" data-api-url="delete/mailbox" data-item="' + encodeURIComponent(item.username) + '" class="btn btn-sm btn-xs-lg btn-xs-half btn-danger"><i class="bi bi-trash"></i> ' + lang.remove + '</a>' +
               '<a href="/index.php?duallogin=' + encodeURIComponent(item.username) + '" class="login_as btn btn-sm btn-xs-lg btn-xs-half btn-success"><i class="bi bi-person-fill"></i> Login</a>';
               if (ALLOW_ADMIN_EMAIL_LOGIN) {
-                item.action += '<a href="/sogo-auth.php?login=' + encodeURIComponent(item.username) + '" class="login_as btn btn-sm btn-xs-lg btn-xs-half btn-primary" target="_blank"><i class="bi bi-envelope-fill"></i> SOGo</a>';
+                item.action += '<a href="/sogo-auth.php?login=' + encodeURIComponent(item.username) + '" class="login_as btn btn-sm btn-xs-lg btn-xs-half btn-primary"><i class="bi bi-envelope-fill"></i> SOGo</a>';
               }
               item.action += '</div>';
             }
@@ -1015,13 +1013,7 @@ jQuery(function($){
           data: 'last_mail_login',
           searchable: false,
           defaultContent: '',
-          responsivePriority: 7,
-          render: function (data, type) {
-            res = data.split("/");
-            return '<div class="badge bg-info mb-2">IMAP @ ' + unix_time_format(Number(res[0])) + '</div><br>' +
-              '<div class="badge bg-info mb-2">POP3 @ ' + unix_time_format(Number(res[1])) + '</div><br>' +
-              '<div class="badge bg-info">SMTP @ ' + unix_time_format(Number(res[2])) + '</div>';
-          }
+          responsivePriority: 7
         },
         {
           title: lang.last_pw_change,
@@ -1047,7 +1039,16 @@ jQuery(function($){
           title: lang.domain,
           data: 'domain',
           defaultContent: '',
-          className: 'none'
+          className: 'none',
+        },
+        {
+          title: lang.iam,
+          data: 'authsource',
+          defaultContent: '',
+          className: 'none',
+          render: function (data, type) {
+            return '<span class="badge bg-primary">' + data + '<i class="ms-2 bi bi-person-circle"></i></i></span>';
+          }
         },
         {
           title: lang.tls_enforce_in,
@@ -1187,7 +1188,8 @@ jQuery(function($){
             } else if (item.attributes.rl_frame === "d"){
               item.attributes.rl_frame = lang_rl.day;
             }
-            item.attributes.rl_value = escapeHtml(item.attributes.rl_value);
+            item.attributes.rl_value = (!item.attributes.rl_value) ? "∞" : escapeHtml(item.attributes.rl_value);
+            item.attributes.ratelimit = item.attributes.rl_value + " " + item.attributes.rl_frame;
 
             item.attributes.quota = humanFileSize(item.attributes.quota);
 
@@ -1332,14 +1334,8 @@ jQuery(function($){
           }
         },
         {
-          title: "rl_frame",
-          data: 'attributes.rl_frame',
-          defaultContent: '',
-          class: 'none',
-        },
-        {
-          title: 'rl_value',
-          data: 'attributes.rl_value',
+          title: lang_edit.ratelimit,
+          data: 'attributes.ratelimit',
           defaultContent: '',
           class: 'none',
         },
@@ -2367,7 +2363,7 @@ jQuery(function($){
     else
       $(tab).find(".table_collapse_option").hide();
   }
-  
+
   function filterByDomain(json, column, table){
     var tableId = $(table.table().container()).attr('id');
     // Create the `select` element
@@ -2390,12 +2386,12 @@ jQuery(function($){
         }
       });
     });
-    
+
     // get unique domain list
     domains = domains.filter(function(value, index, array) {
       return array.indexOf(value) === index;
     });
-    
+
     // add domains to select
     domains.forEach(function(domain) {
         select.append($('<option>' + domain + '</option>'));

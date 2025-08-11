@@ -77,11 +77,11 @@ jQuery(function($){
   acl_data = JSON.parse(acl);
 
   $('.clear-last-logins').on('click', function () {if (confirm(lang.delete_ays)) {last_logins('reset');}})
-  $(".login-history").on('click', function(e) {e.preventDefault(); last_logins('get', $(this).data('days'));$(this).addClass('active').siblings().removeClass('active');});
+  $(".login-history").on('click', function(e) {e.preventDefault(); last_logins('get', $(this).data('days'));$(this).parent().find('li a').removeClass('active');$(this).children(':first-child').addClass('active')});
 
   function last_logins(action, days = 7) {
     if (action == 'get') {
-      $('.last-login').html('<i class="bi bi-hourglass"></i>' +  lang.waiting);
+      $('#spinner-last-login').removeClass('d-none');
       $.ajax({
         dataType: 'json',
         url: '/api/v1/get/last-login/' + encodeURIComponent(mailcow_cc_username) + '/' + days,
@@ -90,26 +90,32 @@ jQuery(function($){
           console.log('error reading last logins');
         },
         success: function (data) {
-          $('.last-login').html();
-          if (data.ui.time) {
-            $('.last-login').html('<i class="bi bi-person-fill"></i> ' + lang.last_ui_login + ': ' + unix_time_format(data.ui.time));
-          } else {
-            $('.last-login').text(lang.no_last_login);
-          }
+          $('.last-sasl-login').html('');
           if (data.sasl) {
-            $('.last-login').append('<ul class="list-group">');
+            $('.last-sasl-login').append('<ul class="list-group">');
             $.each(data.sasl, function (i, item) {
               var datetime = new Date(item.datetime.replace(/-/g, "/"));
               var local_datetime = datetime.toLocaleDateString(undefined, {year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit"});
-              var service = '<div class="badge fs-6 bg-secondary">' + item.service.toUpperCase() + '</div>';
+              var service = '<div class="badge bg-secondary">' + item.service.toUpperCase() + '</div>';
               var app_password = item.app_password ? ' <a href="/edit/app-passwd/' + item.app_password + '"><i class="bi bi-app-indicator"></i> ' + escapeHtml(item.app_password_name || "App") + '</a>' : '';
-              var real_rip = item.real_rip.startsWith("Web") ? item.real_rip : '<a href="https://bgp.he.net/ip/' + item.real_rip + '" target="_blank">' + item.real_rip + "</a>";
+              var real_rip = item.real_rip.startsWith("Web") ? item.real_rip : '<a href="https://bgp.tools/prefix/' + item.real_rip + '" target="_blank">' + item.real_rip + "</a>";
               var ip_location = item.location ? ' <span class="flag-icon flag-icon-' + item.location.toLowerCase() + '"></span>' : '';
               var ip_data = real_rip + ip_location + app_password;
-              $(".last-login").append('<li class="list-group-item">' + local_datetime + " " + service + " " + lang.from + " " + ip_data + "</li>");
+
+              $(".last-sasl-login").append(`
+                <li class="list-group-item d-flex justify-content-between align-items-start">
+                  <div class="ms-2 me-auto d-flex flex-column">
+                    <div class="fw-bold">` + real_rip + `</div>
+                    <small class="fst-italic mt-2">` + service + ` ` + local_datetime + `</small>
+                  </div>
+                  <span>` + ip_location + `</span>
+                </li>
+              `);
             })
-            $('.last-login').append('</ul>');
+            $('.last-sasl-login').append('</ul>');
           }
+
+          $('#spinner-last-login').addClass('d-none');
         }
       })
     } else if (action == 'reset') {
@@ -201,6 +207,14 @@ jQuery(function($){
           title: lang.alias,
           data: 'address',
           defaultContent: ''
+        },
+        {
+          title: lang.description,
+          data: 'description',
+          defaultContent: '',
+          render: function (data, type) {
+            return escapeHtml(data);
+          }
         },
         {
           title: lang.alias_valid_until,
@@ -676,5 +690,5 @@ jQuery(function($){
   onVisible("[id^=wl_policy_mailbox_table]", () => draw_wl_policy_mailbox_table());
   onVisible("[id^=sync_job_table]", () => draw_sync_job_table());
   onVisible("[id^=app_passwd_table]", () => draw_app_passwd_table());
-  last_logins('get');
+  onVisible("[id^=recent-logins]", () => last_logins('get'));
 });

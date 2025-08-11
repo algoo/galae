@@ -93,6 +93,7 @@ $AVAILABLE_LANGUAGES = array(
   'gr-gr' => 'Ελληνικά (Greek)',
   'hu-hu' => 'Magyar (Hungarian)',
   'it-it' => 'Italiano (Italian)',
+  'ja-jp' => '日本語 (Japanese)',
   'ko-kr' => '한국어 (Korean)',
   'lv-lv' => 'latviešu (Latvian)',
   'lt-lt' => 'Lietuvių (Lithuanian)',
@@ -124,7 +125,9 @@ $SHOW_DKIM_PRIV_KEYS = false;
 $MAILCOW_APPS = array(
   array(
     'name' => 'Webmail',
-    'link' => '/SOGo/',
+    'link' => '/SOGo/so',
+    'user_link' => '/SOGo/so',
+    'hide' => true
   )
 );
 
@@ -179,7 +182,7 @@ $MAILBOX_DEFAULT_ATTRIBUTES['tls_enforce_out'] = false;
 // Force password change on next login (only allows login to mailcow UI)
 $MAILBOX_DEFAULT_ATTRIBUTES['force_pw_update'] = false;
 
-// Enable SOGo access (set to false to disable access by default)
+// Enable SOGo access - Users will be redirected to SOGo after login (set to false to disable redirect by default)
 $MAILBOX_DEFAULT_ATTRIBUTES['sogo_access'] = true;
 
 // Send notification when quarantine is not empty (never, hourly, daily, weekly)
@@ -209,6 +212,12 @@ $MAILBOX_DEFAULT_ATTRIBUTES['mailbox_format'] = 'maildir:';
 
 // Show last IMAP and POP3 logins
 $SHOW_LAST_LOGIN = true;
+
+// Maximum number of password reset tokens that can be generated at once per user
+$PW_RESET_TOKEN_LIMIT = 3;
+
+// Maximum time in minutes a password reset token is valid
+$PW_RESET_TOKEN_LIFETIME = 15;
 
 // UV flag handling in FIDO2/WebAuthn - defaults to false to allow iOS logins
 // true = required

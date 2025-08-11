@@ -1,6 +1,6 @@
-FROM alpine:3.19
+FROM alpine:3.21
 
-LABEL maintainer "The Infrastructure Company GmbH <info@servercow.de>"
+LABEL maintainer = "The Infrastructure Company GmbH <info@servercow.de>"
 
 ARG PIP_BREAK_SYSTEM_PACKAGES=1
 WORKDIR /app
@@ -24,4 +24,4 @@ COPY main.py /app/main.py
 COPY modules/ /app/modules/
 
 ENTRYPOINT ["/bin/sh", "/app/docker-entrypoint.sh"]
-CMD exec python main.py
+CMD ["python", "main.py"]

@@ -46,9 +46,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/lib/CSSminifierExtended.php';
 
 require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/lib/array_merge_real.php';
 
-// U2F API + T/HOTP API
-// u2f - deprecated, should be removed
-$u2f = new u2flib_server\U2F('https://' . $_SERVER['HTTP_HOST']);
+// T/HOTP API
 $qrprovider = new RobThree\Auth\Providers\Qr\QRServerProvider();
 $tfa = new RobThree\Auth\TwoFactorAuth($OTP_LABEL, 6, 30, 'sha1', $qrprovider);
 
@@ -68,6 +66,7 @@ try {
   else {
     $redis->connect('redis-mailcow', 6379);
   }
+  $redis->auth(getenv("REDISPASS"));
 }
 catch (Exception $e) {
 // Stop when redis is not available
@@ -177,7 +176,12 @@ function get_remote_ip() {
 
 // Load core functions first
 require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/functions.inc.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/functions.auth.inc.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/sessions.inc.php';
+
+// Init Identity Provider
+$iam_provider = identity_provider('init');
+$iam_settings = identity_provider('get');
 
 // IMAP lib
 // use Ddeboer\Imap\Server;
@@ -293,7 +297,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/functions.rspamd.inc.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/functions.tls_policy_maps.inc.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/functions.transports.inc.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/init_db.inc.php';
-require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/triggers.inc.php';
+require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/triggers.global.inc.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/twig.inc.php';
 init_db_schema();
 if (isset($_SESSION['mailcow_cc_role'])) {
@@ -321,7 +325,7 @@ $UI_TEXTS = customize('get', 'ui_texts');
 if (file_exists('/web/css/themes/'.$UI_THEME.'-bootstrap.css'))
   $css_minifier->add('/web/css/themes/'.$UI_THEME.'-bootstrap.css');
 else
-  $css_minifier->add('/web/css/themes/lumen-bootstrap.css'); 
+  $css_minifier->add('/web/css/themes/lumen-bootstrap.css');
 // minify css build files
 foreach ($css_dir as $css_file) {
   $css_minifier->add('/web/css/build/' . $css_file);

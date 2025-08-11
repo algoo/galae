@@ -1,8 +1,7 @@
-version: '2.1'
 services:
 
     unbound-mailcow:
-      image: mailcow/unbound:1.21
+      image: ghcr.io/mailcow/unbound:1.24
       environment:
         - TZ=${TZ}
         - SKIP_UNBOUND_HEALTHCHECK=${SKIP_UNBOUND_HEALTHCHECK:-n}
@@ -18,14 +17,14 @@ services:
             - unbound
 
     mysql-mailcow:
-      image: mariadb:10.5
+      image: mariadb:10.11
       depends_on:
         - unbound-mailcow
         - netfilter-mailcow
       stop_grace_period: 45s
       volumes:
         - mysql-vol-1:/var/lib/mysql/
-        - mysql-socket-vol-1:/var/run/mysqld/
+        - mysql-socket-vol-1:/var/run/mysqld/:z
         - ./data/conf/mysql/:/etc/mysql/conf.d/:ro,Z
       environment:
         - TZ=${TZ}
@@ -43,9 +42,11 @@ services:
             - mysql
 
     redis-mailcow:
-      image: redis:7-alpine
+      image: redis:7.4.2-alpine
+      entrypoint: ["/bin/sh","/redis-conf.sh"]
       volumes:
         - redis-vol-1:/data/
+        - ./data/conf/redis/redis-conf.sh:/redis-conf.sh:z
       restart: always
       depends_on:
         - netfilter-mailcow
@@ -53,6 +54,8 @@ services:
         - "${REDIS_PORT:-127.0.0.1:7654}:6379"
       environment:
         - TZ=${TZ}
+        - REDISPASS=${REDISPASS}
+        - REDISMASTERPASS=${REDISMASTERPASS:-}
       sysctls:
         - net.core.somaxconn=4096
       networks:
@@ -62,7 +65,7 @@ services:
             - redis
 
     clamd-mailcow:
-      image: mailcow/clamd:1.65
+      image: ghcr.io/mailcow/clamd:1.70
       restart: always
       depends_on:
         unbound-mailcow:
@@ -81,16 +84,19 @@ services:
             - clamd
 
     rspamd-mailcow:
-      image: mailcow/rspamd:1.95
+      image: ghcr.io/mailcow/rspamd:2.2
       stop_grace_period: 30s
       depends_on:
         - dovecot-mailcow
+        - clamd-mailcow
       environment:
         - TZ=${TZ}
         - IPV4_NETWORK=${IPV4_NETWORK:-172.22.1}
         - IPV6_NETWORK=${IPV6_NETWORK:-fd4d:6169:6c63:6f77::/64}
         - REDIS_SLAVEOF_IP=${REDIS_SLAVEOF_IP:-}
         - REDIS_SLAVEOF_PORT=${REDIS_SLAVEOF_PORT:-}
+        - REDISPASS=${REDISPASS}
+        - SPAMHAUS_DQS_KEY=${SPAMHAUS_DQS_KEY:-}
       volumes:
         - ./data/hooks/rspamd:/hooks:Z
         - ./data/conf/rspamd/custom/:/etc/rspamd/custom:z
@@ -111,7 +117,7 @@ services:
             - rspamd
 
     php-fpm-mailcow:
-      image: mailcow/phpfpm:1.87
+      image: ghcr.io/mailcow/phpfpm:1.93
       command: "php-fpm -d date.timezone=${TZ} -d expose_php=0"
       depends_on:
         - redis-mailcow
@@ -120,10 +126,18 @@ services:
         - ./data/web:/web:z
         - ./data/conf/rspamd/dynmaps:/dynmaps:ro,z
         - ./data/conf/rspamd/custom/:/rspamd_custom_maps:z
+        - ./data/conf/dovecot/auth/mailcowauth.php:/mailcowauth/mailcowauth.php:z
+        - ./data/web/inc/functions.inc.php:/mailcowauth/functions.inc.php:z
+        - ./data/web/inc/functions.auth.inc.php:/mailcowauth/functions.auth.inc.php:z
+        - ./data/web/inc/sessions.inc.php:/mailcowauth/sessions.inc.php:z
+        - ./data/web/inc/functions.mailbox.inc.php:/mailcowauth/functions.mailbox.inc.php:z
+        - ./data/web/inc/functions.ratelimit.inc.php:/mailcowauth/functions.ratelimit.inc.php:z
+        - ./data/web/inc/functions.acl.inc.php:/mailcowauth/functions.acl.inc.php:z
         - rspamd-vol-1:/var/lib/rspamd
-        - mysql-socket-vol-1:/var/run/mysqld/
+        - mysql-socket-vol-1:/var/run/mysqld/:z
         - ./data/conf/sogo/:/etc/sogo/:z
         - ./data/conf/rspamd/meta_exporter:/meta_exporter:ro,z
+        - ./data/conf/phpfpm/crons:/crons:z
         - ./data/conf/phpfpm/sogo-sso/:/etc/sogo-sso/:z
         - ./data/conf/phpfpm/php-fpm.d/pools.conf:/usr/local/etc/php-fpm.d/z-pools.conf:Z
         - ./data/conf/phpfpm/php-conf.d/opcache-recommended.ini:/usr/local/etc/php/conf.d/opcache-recommended.ini:Z
@@ -138,6 +152,7 @@ services:
       environment:
         - REDIS_SLAVEOF_IP=${REDIS_SLAVEOF_IP:-}
         - REDIS_SLAVEOF_PORT=${REDIS_SLAVEOF_PORT:-}
+        - REDISPASS=${REDISPASS}
         - LOG_LINES=${LOG_LINES:-9999}
         - TZ=${TZ}
         - DBNAME=${DBNAME}
@@ -159,8 +174,9 @@ services:
         - API_KEY_READ_ONLY=${API_KEY_READ_ONLY:-invalid}
         - API_ALLOW_FROM=${API_ALLOW_FROM:-invalid}
         - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-mailcow-dockerized}
-        - SKIP_SOLR=${SKIP_SOLR:-y}
+        - SKIP_FTS=${SKIP_FTS:-y}
         - SKIP_CLAMD=${SKIP_CLAMD:-n}
+        - SKIP_OLEFY=${SKIP_OLEFY:-n}
         - SKIP_SOGO=${SKIP_SOGO:-n}
         - ALLOW_ADMIN_EMAIL_LOGIN=${ALLOW_ADMIN_EMAIL_LOGIN:-n}
         - MASTER=${MASTER:-y}
@@ -168,14 +184,23 @@ services:
         - DEMO_MODE=${DEMO_MODE:-n}
         - WEBAUTHN_ONLY_TRUSTED_VENDORS=${WEBAUTHN_ONLY_TRUSTED_VENDORS:-n}
         - CLUSTERMODE=${CLUSTERMODE:-}
+        - ADDITIONAL_SERVER_NAMES=${ADDITIONAL_SERVER_NAMES:-}
       restart: always
+      labels:
+        ofelia.enabled: "true"
+        ofelia.job-exec.phpfpm_keycloak_sync.schedule: "@every 1m"
+        ofelia.job-exec.phpfpm_keycloak_sync.no-overlap: "true"
+        ofelia.job-exec.phpfpm_keycloak_sync.command: "/bin/bash -c \"php /crons/keycloak-sync.php || exit 0\""
+        ofelia.job-exec.phpfpm_ldap_sync.schedule: "@every 1m"
+        ofelia.job-exec.phpfpm_ldap_sync.no-overlap: "true"
+        ofelia.job-exec.phpfpm_ldap_sync.command: "/bin/bash -c \"php /crons/ldap-sync.php || exit 0\""
       networks:
         mailcow-network:
           aliases:
             - phpfpm
 
     sogo-mailcow:
-      image: mailcow/sogo:1.123
+      image: ghcr.io/mailcow/sogo:1.133
       environment:
         - DBNAME=${DBNAME}
         - DBUSER=${DBUSER}
@@ -192,6 +217,7 @@ services:
         - MASTER=${MASTER:-y}
         - REDIS_SLAVEOF_IP=${REDIS_SLAVEOF_IP:-}
         - REDIS_SLAVEOF_PORT=${REDIS_SLAVEOF_PORT:-}
+        - REDISPASS=${REDISPASS}
       dns:
         - ${IPV4_NETWORK:-172.22.1}.254
       volumes:
@@ -199,9 +225,12 @@ services:
         - ./data/conf/sogo/:/etc/sogo/:z
         - ./data/web/inc/init_db.inc.php:/init_db.inc.php:z
         - ./data/conf/sogo/custom-favicon.ico:/usr/lib/GNUstep/SOGo/WebServerResources/img/sogo.ico:z
+        - ./data/conf/sogo/custom-shortlogo.svg:/usr/lib/GNUstep/SOGo/WebServerResources/img/sogo-compact.svg:z
+        - ./data/conf/sogo/custom-fulllogo.svg:/usr/lib/GNUstep/SOGo/WebServerResources/img/sogo-full.svg:z
+        - ./data/conf/sogo/custom-fulllogo.png:/usr/lib/GNUstep/SOGo/WebServerResources/img/sogo-logo.png:z
         - ./data/conf/sogo/custom-theme.js:/usr/lib/GNUstep/SOGo/WebServerResources/js/theme.js:z
         - ./data/conf/sogo/custom-sogo.js:/usr/lib/GNUstep/SOGo/WebServerResources/js/custom-sogo.js:z
-        - mysql-socket-vol-1:/var/run/mysqld/
+        - mysql-socket-vol-1:/var/run/mysqld/:z
         - sogo-web-vol-1:/sogo_web
         - sogo-userdata-backup-vol-1:/sogo_backup
       labels:
@@ -209,9 +238,9 @@ services:
         ofelia.job-exec.sogo_sessions.schedule: "@every 1m"
         ofelia.job-exec.sogo_sessions.command: "/bin/bash -c \"[[ $${MASTER} == y ]] && /usr/local/bin/gosu sogo /usr/sbin/sogo-tool -v expire-sessions $${SOGO_EXPIRE_SESSION} || exit 0\""
         ofelia.job-exec.sogo_ealarms.schedule: "@every 1m"
-        ofelia.job-exec.sogo_ealarms.command: "/bin/bash -c \"[[ $${MASTER} == y ]] && /usr/local/bin/gosu sogo /usr/sbin/sogo-ealarms-notify -p /etc/sogo/sieve.creds || exit 0\""
+        ofelia.job-exec.sogo_ealarms.command: "/bin/bash -c \"[[ $${MASTER} == y ]] && /usr/local/bin/gosu sogo /usr/sbin/sogo-ealarms-notify -p /etc/sogo/cron.creds || exit 0\""
         ofelia.job-exec.sogo_eautoreply.schedule: "@every 5m"
-        ofelia.job-exec.sogo_eautoreply.command: "/bin/bash -c \"[[ $${MASTER} == y ]] && /usr/local/bin/gosu sogo /usr/sbin/sogo-tool update-autoreply -p /etc/sogo/sieve.creds || exit 0\""
+        ofelia.job-exec.sogo_eautoreply.command: "/bin/bash -c \"[[ $${MASTER} == y ]] && /usr/local/bin/gosu sogo /usr/sbin/sogo-tool update-autoreply -p /etc/sogo/cron.creds || exit 0\""
         ofelia.job-exec.sogo_backup.schedule: "@every 24h"
         ofelia.job-exec.sogo_backup.command: "/bin/bash -c \"[[ $${MASTER} == y ]] && /usr/local/bin/gosu sogo /usr/sbin/sogo-tool backup /sogo_backup ALL || exit 0\""
       restart: always
@@ -222,10 +251,11 @@ services:
             - sogo
 
     dovecot-mailcow:
-      image: mailcow/dovecot:1.28.2
+      image: ghcr.io/mailcow/dovecot:2.34
       depends_on:
         - mysql-mailcow
         - netfilter-mailcow
+        - redis-mailcow
       dns:
         - ${IPV4_NETWORK:-172.22.1}.254
       cap_add:
@@ -242,7 +272,7 @@ services:
         - ./data/conf/rspamd/custom/:/etc/rspamd/custom:z
         - ./data/assets/templates:/templates:z
         - rspamd-vol-1:/var/lib/rspamd
-        - mysql-socket-vol-1:/var/run/mysqld/
+        - mysql-socket-vol-1:/var/run/mysqld/:z
       environment:
         - DOVECOT_MASTER_USER=${DOVECOT_MASTER_USER:-}
         - DOVECOT_MASTER_PASS=${DOVECOT_MASTER_PASS:-}
@@ -259,11 +289,14 @@ services:
         - ALLOW_ADMIN_EMAIL_LOGIN=${ALLOW_ADMIN_EMAIL_LOGIN:-n}
         - MAILDIR_GC_TIME=${MAILDIR_GC_TIME:-7200}
         - ACL_ANYONE=${ACL_ANYONE:-disallow}
-        - SKIP_SOLR=${SKIP_SOLR:-y}
+        - SKIP_FTS=${SKIP_FTS:-y}
+        - FTS_HEAP=${FTS_HEAP:-512}
+        - FTS_PROCS=${FTS_PROCS:-3}
         - MAILDIR_SUB=${MAILDIR_SUB:-}
         - MASTER=${MASTER:-y}
         - REDIS_SLAVEOF_IP=${REDIS_SLAVEOF_IP:-}
         - REDIS_SLAVEOF_PORT=${REDIS_SLAVEOF_PORT:-}
+        - REDISPASS=${REDISPASS}
         - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-mailcow-dockerized}
       ports:
         - "${DOVEADM_PORT:-127.0.0.1:19991}:12345"
@@ -290,7 +323,7 @@ services:
         ofelia.job-exec.dovecot_sarules.schedule: "@every 24h"
         ofelia.job-exec.dovecot_sarules.command: "/bin/bash -c \"/usr/local/bin/sa-rules.sh\""
         ofelia.job-exec.dovecot_fts.schedule: "@every 24h"
-        ofelia.job-exec.dovecot_fts.command: "/usr/bin/curl http://solr:8983/solr/dovecot-fts/update?optimize=true"
+        ofelia.job-exec.dovecot_fts.command: "/bin/bash -c \"/usr/local/bin/gosu vmail /usr/local/bin/optimize-fts.sh\""
         ofelia.job-exec.dovecot_repl_health.schedule: "@every 5m"
         ofelia.job-exec.dovecot_repl_health.command: "/bin/bash -c \"/usr/local/bin/gosu vmail /usr/local/bin/repl_health.sh\""
       ulimits:
@@ -305,7 +338,7 @@ services:
             - dovecot
 
     postfix-mailcow:
-      image: mailcow/postfix:1.74
+      image: ghcr.io/mailcow/postfix:1.80
       depends_on:
         mysql-mailcow:
           condition: service_started
@@ -318,7 +351,7 @@ services:
         - postfix-vol-1:/var/spool/postfix
         - crypt-vol-1:/var/lib/zeyple
         - rspamd-vol-1:/var/lib/rspamd
-        - mysql-socket-vol-1:/var/run/mysqld/
+        - mysql-socket-vol-1:/var/run/mysqld/:z
       environment:
         - LOG_LINES=${LOG_LINES:-9999}
         - TZ=${TZ}
@@ -327,6 +360,7 @@ services:
         - DBPASS=${DBPASS}
         - REDIS_SLAVEOF_IP=${REDIS_SLAVEOF_IP:-}
         - REDIS_SLAVEOF_PORT=${REDIS_SLAVEOF_PORT:-}
+        - REDISPASS=${REDISPASS}
         - MAILCOW_HOSTNAME=${MAILCOW_HOSTNAME}
         - SPAMHAUS_DQS_KEY=${SPAMHAUS_DQS_KEY:-}
       cap_add:
@@ -356,39 +390,40 @@ services:
 
     nginx-mailcow:
       depends_on:
-        - sogo-mailcow
-        - php-fpm-mailcow
         - redis-mailcow
-      image: nginx:mainline-alpine
+        - php-fpm-mailcow
+        - sogo-mailcow
+        - rspamd-mailcow
+      image: ghcr.io/mailcow/nginx:1.03
       dns:
         - ${IPV4_NETWORK:-172.22.1}.254
-      command: /bin/sh -c "envsubst < /etc/nginx/conf.d/templates/listen_plain.template > /etc/nginx/conf.d/listen_plain.active &&
-        envsubst < /etc/nginx/conf.d/templates/listen_ssl.template > /etc/nginx/conf.d/listen_ssl.active &&
-        envsubst < /etc/nginx/conf.d/templates/sogo.template > /etc/nginx/conf.d/sogo.active &&
-        . /etc/nginx/conf.d/templates/server_name.template.sh > /etc/nginx/conf.d/server_name.active &&
-        . /etc/nginx/conf.d/templates/sites.template.sh > /etc/nginx/conf.d/sites.active &&
-        . /etc/nginx/conf.d/templates/sogo_eas.template.sh > /etc/nginx/conf.d/sogo_eas.active &&
-        nginx -qt &&
-        until ping phpfpm -c1 > /dev/null; do sleep 1; done &&
-        until ping sogo -c1 > /dev/null; do sleep 1; done &&
-        until ping redis -c1 > /dev/null; do sleep 1; done &&
-        until ping rspamd -c1 > /dev/null; do sleep 1; done &&
-        exec nginx -g 'daemon off;'"
       environment:
         - HTTPS_PORT=${HTTPS_PORT:-443}
         - HTTP_PORT=${HTTP_PORT:-80}
         - MAILCOW_HOSTNAME=${MAILCOW_HOSTNAME}
-        - IPV4_NETWORK=${IPV4_NETWORK:-172.22.1}
+        - ADDITIONAL_SERVER_NAMES=${ADDITIONAL_SERVER_NAMES:-}
         - TZ=${TZ}
         - SKIP_SOGO=${SKIP_SOGO:-n}
-        - ALLOW_ADMIN_EMAIL_LOGIN=${ALLOW_ADMIN_EMAIL_LOGIN:-n}
-        - ADDITIONAL_SERVER_NAMES=${ADDITIONAL_SERVER_NAMES:-}
+        - SKIP_RSPAMD=${SKIP_RSPAMD:-n}
+        - DISABLE_IPv6=${DISABLE_IPv6:-n}
+        - HTTP_REDIRECT=${HTTP_REDIRECT:-n}
+        - PHPFPMHOST=${PHPFPMHOST:-}
+        - SOGOHOST=${SOGOHOST:-}
+        - RSPAMDHOST=${RSPAMDHOST:-}
+        - REDISHOST=${REDISHOST:-}
+        - IPV4_NETWORK=${IPV4_NETWORK:-172.22.1}
+        - NGINX_USE_PROXY_PROTOCOL=${NGINX_USE_PROXY_PROTOCOL:-n}
+        - TRUSTED_PROXIES=${TRUSTED_PROXIES:-}
       volumes:
         - ./data/web:/web:ro,z
         - ./data/conf/rspamd/dynmaps:/dynmaps:ro,z
         - ./data/assets/ssl/:/etc/ssl/mail/:ro,z
         - ./data/conf/nginx/:/etc/nginx/conf.d/:z
         - ./data/conf/rspamd/meta_exporter:/meta_exporter:ro,z
+        - ./data/conf/dovecot/auth/mailcowauth.php:/mailcowauth/mailcowauth.php:z
+        - ./data/web/inc/functions.inc.php:/mailcowauth/functions.inc.php:z
+        - ./data/web/inc/functions.auth.inc.php:/mailcowauth/functions.auth.inc.php:z
+        - ./data/web/inc/sessions.inc.php:/mailcowauth/sessions.inc.php:z
         - sogo-web-vol-1:/usr/lib/GNUstep/SOGo/
       ports:
         - "${HTTPS_BIND:-}:${HTTPS_PORT:-443}:${HTTPS_PORT:-443}"
@@ -405,13 +440,13 @@ services:
           condition: service_started
         unbound-mailcow:
           condition: service_healthy
-      image: mailcow/acme:1.87
+      image: ghcr.io/mailcow/acme:1.93
       dns:
         - ${IPV4_NETWORK:-172.22.1}.254
       environment:
         - LOG_LINES=${LOG_LINES:-9999}
-        - ACME_CONTACT=${ACME_CONTACT:-}
         - ADDITIONAL_SAN=${ADDITIONAL_SAN}
+        - AUTODISCOVER_SAN=${AUTODISCOVER_SAN:-y}
         - MAILCOW_HOSTNAME=${MAILCOW_HOSTNAME}
         - DBNAME=${DBNAME}
         - DBUSER=${DBUSER}
@@ -427,13 +462,14 @@ services:
         - TZ=${TZ}
         - REDIS_SLAVEOF_IP=${REDIS_SLAVEOF_IP:-}
         - REDIS_SLAVEOF_PORT=${REDIS_SLAVEOF_PORT:-}
+        - REDISPASS=${REDISPASS}
         - SNAT_TO_SOURCE=${SNAT_TO_SOURCE:-n}
         - SNAT6_TO_SOURCE=${SNAT6_TO_SOURCE:-n}
       volumes:
         - ./data/web/.well-known/acme-challenge:/var/www/acme:z
         - ./data/assets/ssl:/var/lib/acme/:z
         - ./data/assets/ssl-example:/var/lib/ssl-example/:ro,Z
-        - mysql-socket-vol-1:/var/run/mysqld/
+        - mysql-socket-vol-1:/var/run/mysqld/:z
       restart: always
       networks:
         mailcow-network:
@@ -441,7 +477,7 @@ services:
             - acme
 
     netfilter-mailcow:
-      image: mailcow/netfilter:1.58
+      image: ghcr.io/mailcow/netfilter:1.61
       stop_grace_period: 30s
       restart: always
       privileged: true
@@ -453,6 +489,7 @@ services:
         - SNAT6_TO_SOURCE=${SNAT6_TO_SOURCE:-n}
         - REDIS_SLAVEOF_IP=${REDIS_SLAVEOF_IP:-}
         - REDIS_SLAVEOF_PORT=${REDIS_SLAVEOF_PORT:-}
+        - REDISPASS=${REDISPASS}
         - MAILCOW_REPLICA_IP=${MAILCOW_REPLICA_IP:-}
         - DISABLE_NETFILTER_ISOLATION_RULE=${DISABLE_NETFILTER_ISOLATION_RULE:-n}
       network_mode: "host"
@@ -460,14 +497,14 @@ services:
         - /lib/modules:/lib/modules:ro
 
     watchdog-mailcow:
-      image: mailcow/watchdog:2.02
+      image: ghcr.io/mailcow/watchdog:2.08
       dns:
         - ${IPV4_NETWORK:-172.22.1}.254
       tmpfs:
         - /tmp
       volumes:
         - rspamd-vol-1:/var/lib/rspamd
-        - mysql-socket-vol-1:/var/run/mysqld/
+        - mysql-socket-vol-1:/var/run/mysqld/:z
         - postfix-vol-1:/var/spool/postfix
         - ./data/assets/ssl:/etc/ssl/mail/:ro,z
       restart: always
@@ -477,7 +514,6 @@ services:
         - mysql-mailcow
         - acme-mailcow
         - redis-mailcow
-
       environment:
         - IPV6_NETWORK=${IPV6_NETWORK:-fd4d:6169:6c63:6f77::/64}
         - LOG_LINES=${LOG_LINES:-9999}
@@ -502,11 +538,13 @@ services:
         - IP_BY_DOCKER_API=${IP_BY_DOCKER_API:-0}
         - CHECK_UNBOUND=${CHECK_UNBOUND:-1}
         - SKIP_CLAMD=${SKIP_CLAMD:-n}
+        - SKIP_OLEFY=${SKIP_OLEFY:-n}
         - SKIP_LETS_ENCRYPT=${SKIP_LETS_ENCRYPT:-n}
         - SKIP_SOGO=${SKIP_SOGO:-n}
         - HTTPS_PORT=${HTTPS_PORT:-443}
         - REDIS_SLAVEOF_IP=${REDIS_SLAVEOF_IP:-}
         - REDIS_SLAVEOF_PORT=${REDIS_SLAVEOF_PORT:-}
+        - REDISPASS=${REDISPASS}
         - EXTERNAL_CHECKS_THRESHOLD=${EXTERNAL_CHECKS_THRESHOLD:-1}
         - NGINX_THRESHOLD=${NGINX_THRESHOLD:-5}
         - UNBOUND_THRESHOLD=${UNBOUND_THRESHOLD:-5}
@@ -532,7 +570,7 @@ services:
             - watchdog
 
     dockerapi-mailcow:
-      image: mailcow/dockerapi:2.07
+      image: ghcr.io/mailcow/dockerapi:2.11
       security_opt:
         - label=disable
       restart: always
@@ -543,6 +581,7 @@ services:
         - TZ=${TZ}
         - REDIS_SLAVEOF_IP=${REDIS_SLAVEOF_IP:-}
         - REDIS_SLAVEOF_PORT=${REDIS_SLAVEOF_PORT:-}
+        - REDISPASS=${REDISPASS}
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock:ro
       networks:
@@ -550,29 +589,8 @@ services:
           aliases:
             - dockerapi
 
-    
-    ##### Will be removed soon #####
-    solr-mailcow:
-      image: mailcow/solr:1.8.2
-      restart: always
-      depends_on:
-        - netfilter-mailcow
-      volumes:
-        - solr-vol-1:/opt/solr/server/solr/dovecot-fts/data
-      ports:
-        - "${SOLR_PORT:-127.0.0.1:18983}:8983"
-      environment:
-        - TZ=${TZ}
-        - SOLR_HEAP=${SOLR_HEAP:-1024}
-        - SKIP_SOLR=${SKIP_SOLR:-y}
-      networks:
-        mailcow-network:
-          aliases:
-            - solr
-    ################################
-
     olefy-mailcow:
-      image: mailcow/olefy:1.12
+      image: ghcr.io/mailcow/olefy:1.15
       restart: always
       environment:
         - TZ=${TZ}
@@ -584,6 +602,7 @@ services:
         - OLEFY_LOGLVL=20
         - OLEFY_MINLENGTH=500
         - OLEFY_DEL_TMP=1
+        - SKIP_OLEFY=${SKIP_OLEFY:-n}
       networks:
         mailcow-network:
           aliases:
@@ -592,9 +611,10 @@ services:
     ofelia-mailcow:
       image: mcuadros/ofelia:latest
       restart: always
-      command: daemon --docker
+      command: daemon --docker -f label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}
       environment:
         - TZ=${TZ}
+        - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
       depends_on:
         - sogo-mailcow
         - dovecot-mailcow
@@ -626,7 +646,6 @@ services:
         - netfilter-mailcow
         - watchdog-mailcow
         - dockerapi-mailcow
-        - solr-mailcow
       environment:
         - TZ=${TZ}
       image: robbertkl/ipv6nat
@@ -658,7 +677,6 @@ volumes:
   mysql-socket-vol-1:
   redis-vol-1:
   rspamd-vol-1:
-  solr-vol-1:
   postfix-vol-1:
   crypt-vol-1:
   sogo-web-vol-1:

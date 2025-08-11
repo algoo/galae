@@ -444,12 +444,9 @@
         "external_logs": "Eksterne logfiler",
         "history_all_servers": "Historie (alle servere)",
         "in_memory_logs": "In-memory logs",
-        "jvm_memory_solr": "Brug af JVM-hukommelse",
         "log_info": "<p>mailcow <b>in-memory logs</b> er samlet i Redis-lister og trimmet til LOG_LINES (%d) hvert minut for at reducere hamring.\r\n  <br>Logbøger i hukommelsen er ikke beregnet til at være vedholdende. Alle applikationer, der logger ind i hukommelsen, logger også på Docker-dæmonen og derfor til standardlogdriveren.\r\n  <br>Logtypen i hukommelsen skal bruges til fejlfinding af mindre problemer med containere.</p>\r\n  <p><b>Eksterne logfiler</b> indsamles via API for den givne applikation.</p>\r\n  <p><b>Statiske logfiler</b> er for det meste aktivitetslogfiler, der ikke er logget på Dockerd, men stadig skal være vedholdende (undtagen API-logfiler).</p>",
         "logs": "Logs",
         "restart_container": "Genstart",
-        "solr_dead": "Solr starter, deaktiveres eller døde.",
-        "solr_status": "Solr-status",
         "started_on": "Startede den",
         "static_logs": "Statiske logfiler",
         "system_containers": "System og Beholdere",
@@ -604,7 +601,7 @@
         "fido2_webauthn": "FIDO2/WebAuthn Login",
         "login": "Login",
         "mobileconfig_info": "Log ind som postkassebruger for at downloade den anmodede Apple-forbindelsesprofil.",
-        "other_logins": "Nøgle login",
+        "other_logins": "eller log ind med",
         "password": "Adgangskode",
         "username": "Brugernavn"
     },
@@ -709,7 +706,7 @@
         "recipient_map": "Modtagerkort",
         "recipient_map_info": "Modtagerkort bruges til at erstatte destinationsadressen i en meddelelse, før den leveres.",
         "recipient_map_new": "Ny modtager",
-        "recipient_map_new_info": "Modtagerkortdestination skal være en gyldig e-mail-adresse.",
+        "recipient_map_new_info": "Modtagerkortdestination skal være gyldige e-mail-adresser eller et domænenavn.",
         "recipient_map_old": "Original modtager",
         "recipient_map_old_info": "En modtager kortlægger den originale destination, skal være gyldige e-mail-adresser eller et domænenavn.",
         "recipient_maps": "Modtagerkort",
@@ -825,9 +822,7 @@
     },
     "start": {
         "help": "Vis / skjul hjælpepanel",
-        "imap_smtp_server_auth_info": "Brug din fulde e-mail-adresse og PLAIN-godkendelsesmekanismen.<br>\r\nDine login-data bliver krypteret af den obligatoriske kryptering på serversiden.",
-        "mailcow_apps_detail": "Brug en mailcow-app til at få adgang til dine mails, kalender, kontakter og mere.",
-        "mailcow_panel_detail": "<b>Domæneadministratorer</b> oprette, ændre eller slette postkasser og aliasser, ændre domæner og læse yderligere information om deres tildelte domæner.<br>\r\n<b>Mailbox-brugere</b>er i stand til at oprette tidsbegrænsede aliaser (spamaliaser), ændre deres adgangskode og spamfilterindstillinger."
+        "imap_smtp_server_auth_info": "Brug din fulde e-mail-adresse og PLAIN-godkendelsesmekanismen.<br>\r\nDine login-data bliver krypteret af den obligatoriske kryptering på serversiden."
     },
     "success": {
         "acl_saved": "ACL til objekt %s gemt",
@@ -971,6 +966,7 @@
         "create_syncjob": "Opret nyt sync job",
         "daily": "Dagligt",
         "day": "dag",
+        "description": "Beskrivelse",
         "delete_ays": "Bekræft venligst ønsket om sletning.",
         "direct_aliases": "Direkte alias addresser",
         "direct_aliases_desc": "Direkte alias-adresser påvirkes af spamfilter og TLS-politiske indstillinger.",

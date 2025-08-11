@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-DEBIAN_DOCKER_IMAGE="mailcow/backup:latest"
+DEBIAN_DOCKER_IMAGE="ghcr.io/mailcow/backup:latest"
 
 if [[ ! -z ${MAILCOW_BACKUP_LOCATION} ]]; then
   BACKUP_LOCATION="${MAILCOW_BACKUP_LOCATION}"
@@ -55,10 +55,10 @@ ENV_FILE=${SCRIPT_DIR}/../.env
 THREADS=$(echo ${THREADS:-1})
 ARCH=$(uname -m)
 
-if ! [[ "${THREADS}" =~ ^[1-9]+$ ]] ; then
+if ! [[ "${THREADS}" =~ ^[1-9][0-9]?$ ]] ; then
   echo "Thread input is not a number!"
   exit 1
-elif [[ "${THREADS}" =~ ^[1-9]+$ ]] ; then
+elif [[ "${THREADS}" =~ ^[1-9][0-9]?$ ]] ; then
   echo "Using ${THREADS} Thread(s) for this run."
   echo "Notice: You can set the Thread count with the THREADS Variable before you run this script."
 fi
@@ -119,7 +119,7 @@ function backup() {
         ${DEBIAN_DOCKER_IMAGE} /bin/tar --warning='no-file-ignored' --use-compress-program="pigz --rsyncable -p ${THREADS}" -Pcvpf /backup/backup_crypt.tar.gz /crypt
       ;;&
     redis|all)
-      docker exec $(docker ps -qf name=redis-mailcow) redis-cli save
+      docker exec $(docker ps -qf name=redis-mailcow) redis-cli -a ${REDISPASS} --no-auth-warning save
       docker run --name mailcow-backup --rm \
         -v ${BACKUP_LOCATION}/mailcow-${DATE}:/backup:z \
         -v $(docker volume ls -qf name=^${CMPS_PRJ}_redis-vol-1$):/redis:ro,z \
@@ -199,7 +199,7 @@ function restore() {
     case "$1" in
     vmail)
       docker stop $(docker ps -qf name=dovecot-mailcow)
-      docker run -it --name mailcow-backup --rm \
+      docker run -i --name mailcow-backup --rm \
         -v ${RESTORE_LOCATION}:/backup:z \
         -v $(docker volume ls -qf name=^${CMPS_PRJ}_vmail-vol-1$):/vmail:z \
         ${DEBIAN_DOCKER_IMAGE} /bin/tar --use-compress-program="pigz -d -p ${THREADS}" -Pxvf /backup/backup_vmail.tar.gz
@@ -218,7 +218,7 @@ function restore() {
       ;;
     redis)
       docker stop $(docker ps -qf name=redis-mailcow)
-      docker run -it --name mailcow-backup --rm \
+      docker run -i --name mailcow-backup --rm \
         -v ${RESTORE_LOCATION}:/backup:z \
         -v $(docker volume ls -qf name=^${CMPS_PRJ}_redis-vol-1$):/redis:z \
         ${DEBIAN_DOCKER_IMAGE} /bin/tar --use-compress-program="pigz -d -p ${THREADS}" -Pxvf /backup/backup_redis.tar.gz
@@ -226,7 +226,7 @@ function restore() {
       ;;
     crypt)
       docker stop $(docker ps -qf name=dovecot-mailcow)
-      docker run -it --name mailcow-backup --rm \
+      docker run -i --name mailcow-backup --rm \
         -v ${RESTORE_LOCATION}:/backup:z \
         -v $(docker volume ls -qf name=^${CMPS_PRJ}_crypt-vol-1$):/crypt:z \
         ${DEBIAN_DOCKER_IMAGE} /bin/tar --use-compress-program="pigz -d -p ${THREADS}" -Pxvf /backup/backup_crypt.tar.gz
@@ -236,10 +236,10 @@ function restore() {
       if [[ $(find "${RESTORE_LOCATION}" \( -name '*x86*' -o -name '*aarch*' \) -exec basename {} \; | sed 's/^\.//' | sed 's/^\.//') == "" ]]; then
         echo -e "\e[33mCould not find a architecture signature of the loaded backup... Maybe the backup was done before the multiarch update?"
         sleep 2
-        echo -e "Continuing anyhow. If rspamd is crashing opon boot try remove the rspamd volume with docker volume rm ${CMPS_PRJ}_rspamd-vol-1 after you've stopped the stack.\e[0m"
+        echo -e "Continuing anyhow. If rspamd is crashing upon boot try remove the rspamd volume with docker volume rm ${CMPS_PRJ}_rspamd-vol-1 after you've stopped the stack.\e[0m"
         sleep 2
         docker stop $(docker ps -qf name=rspamd-mailcow)
-        docker run -it --name mailcow-backup --rm \
+        docker run -i --name mailcow-backup --rm \
           -v ${RESTORE_LOCATION}:/backup:z \
           -v $(docker volume ls -qf name=^${CMPS_PRJ}_rspamd-vol-1$):/rspamd:z \
           ${DEBIAN_DOCKER_IMAGE} /bin/tar --use-compress-program="pigz -d -p ${THREADS}" -Pxvf /backup/backup_rspamd.tar.gz
@@ -250,7 +250,7 @@ function restore() {
         echo -e "Skipping rspamd due to compatibility issues!\e[0m"
       else
         docker stop $(docker ps -qf name=rspamd-mailcow)
-        docker run -it --name mailcow-backup --rm \
+        docker run -i --name mailcow-backup --rm \
           -v ${RESTORE_LOCATION}:/backup:z \
           -v $(docker volume ls -qf name=^${CMPS_PRJ}_rspamd-vol-1$):/rspamd:z \
           ${DEBIAN_DOCKER_IMAGE} /bin/tar --use-compress-program="pigz -d -p ${THREADS}" -Pxvf /backup/backup_rspamd.tar.gz
@@ -259,7 +259,7 @@ function restore() {
       ;;
     postfix)
       docker stop $(docker ps -qf name=postfix-mailcow)
-      docker run -it --name mailcow-backup --rm \
+      docker run -i --name mailcow-backup --rm \
         -v ${RESTORE_LOCATION}:/backup:z \
         -v $(docker volume ls -qf name=^${CMPS_PRJ}_postfix-vol-1$):/postfix:z \
         ${DEBIAN_DOCKER_IMAGE} /bin/tar --use-compress-program="pigz -d -p ${THREADS}" -Pxvf /backup/backup_postfix.tar.gz
@@ -295,7 +295,7 @@ function restore() {
           ${SQLIMAGE} /bin/bash -c "shopt -s dotglob ; /bin/rm -rf /var/lib/mysql/* ; rsync -avh --usermap=root:mysql --groupmap=root:mysql /backup/ /var/lib/mysql/"
         elif [[ -f "${RESTORE_LOCATION}/backup_mysql.gz" ]]; then
         docker run \
-          -it --name mailcow-backup --rm \
+          -i --name mailcow-backup --rm \
           -v $(docker volume ls -qf name=^${CMPS_PRJ}_mysql-vol-1$):/var/lib/mysql/:z \
           --entrypoint= \
           -u mysql \

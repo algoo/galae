@@ -267,7 +267,11 @@
         "upload": "Lataa",
         "username": "Käyttäjätunnus",
         "validate_license_now": "Vahvista GUID-tunnus lisenssi palvelinta vastaan",
-        "yes": "&#10003;"
+        "yes": "&#10003;",
+        "allowed_methods": "Kulunvalvonta-salli-menetelmät",
+        "admins": "Järjestelmänvalvojat",
+        "admins_ldap": "LDAP-ylläpitäjät",
+        "advanced_settings": "Lisäasetukset"
     },
     "danger": {
         "access_denied": "Käyttö estetty tai lomake tiedot eivät kelpaa",
@@ -376,16 +380,13 @@
         "disk_usage": "Levyn käyttö",
         "external_logs": "Ulkoiset loki",
         "in_memory_logs": "Muistissa olevat lokit",
-        "jvm_memory_solr": "JVM-muistin käyttö",
         "log_info": "<p>mailcow <b>muistissa olevat lokit</b> kerätään Redis-luetteloihin ja leikataan LOG_LINES (%d) joka minuutti lyömisen vähentämiseksi.\r\n  <br>Muistissa olevien lokien ei ole tarkoitus olla pysyviä. Kaikki sovellukset, jotka kirjautuvat muistiin, kirjautuvat myös Docker-daemoniin ja siten oletusarvoiseen lokitiedostoon.\r\n  <br>Muistin lokityyppiä olisi käytettävä virheiden virheenkorjaukseen säilöissä.</p>\r\n  <p><b>Ulkoiset lokit</b> kerätään annetun sovelluksen API: n kautta.</p>\r\n  <p><b>Staattiset lokit</b> ovat useimmiten toimintalokkeja, joita ei kirjata Dockerdiin, mutta joiden on silti oltava pysyviä (paitsi API-lokit).</p>",
         "logs": "Logit tausta palveluista",
         "restart_container": "Uudelleen käynnistä",
-        "solr_dead": "Solr käynnistyy, on poissa käytöstä tai kuoli.",
         "docs": "Docs",
         "last_modified": "Viimeksi muokattu",
         "size": "Koko",
         "started_at": "Käynnistetty",
-        "solr_status": "Solr-tila",
         "uptime": "Päällä",
         "started_on": "Aloitettiin",
         "static_logs": "Staattiset lokit",
@@ -606,7 +607,7 @@
         "recipient_map": "Vastaanottajien yhdistämis määritykset",
         "recipient_map_info": "Vastaanottajan karttoja käytetään korvaamaan viestin kohde osoite ennen sen toimittamista.",
         "recipient_map_new": "Uusi vastaanottaja",
-        "recipient_map_new_info": "Vastaanottajan yhdistämis kartan kohteen on oltava kelvollinen sähköposti osoite.",
+        "recipient_map_new_info": "Vastaanottajan yhdistämis kartan kohteen on oltava kelvollinen sähköposti osoite tai verkkotunnus alueen nimi.",
         "recipient_map_old": "Alkuperäinen vastaanottaja",
         "recipient_map_old_info": "Vastaanottajan yhdistämis määritysten alkuperäisen kohteen on oltava kelvollinen sähköposti osoite tai verkkotunnus alueen nimi.",
         "recipient_maps": "Vastaanottajien yhdistämis määritykset",
@@ -690,9 +691,7 @@
     },
     "start": {
         "help": "Näytä/Piilota help paneeli",
-        "imap_smtp_server_auth_info": "Käytä täydellistä sähkö posti osoitetta ja tavallista todennus mekanismia.<br>\r\nPalvelin puolen pakollinen salaus salaa kirjautumistietosi.",
-        "mailcow_apps_detail": "Käytä mailcow-sovellusta, kun haluat käyttää sähköposteja, kalenteria, yhteys tietoja ja paljon muuta",
-        "mailcow_panel_detail": "<b>Verkkotunnus alueen järjestelmänvalvojat</b> Luo, muokkaa tai poistaa posti laatikoita ja aliaksia, muita verkko tunnuksia ja lue lisä tietoja niiden määritetyista verkko tunnuksista.<br>\r\n<b>Posti laatikon käyttäjät</b> pystyvät luomaan rajoitetun ajan aliaksia (roska posti asetuksia), muuttamaan salasanaa ja roska posti suodattimen asetuksia."
+        "imap_smtp_server_auth_info": "Käytä täydellistä sähkö posti osoitetta ja tavallista todennus mekanismia.<br>\r\nPalvelin puolen pakollinen salaus salaa kirjautumistietosi."
     },
     "success": {
         "acl_saved": "Objektin ACL %s tallenettu",
@@ -806,6 +805,7 @@
         "create_syncjob": "Luo uusi synkronointi työ",
         "daily": "Päivittäin",
         "day": "Päivä",
+        "description": "Kuvaus",
         "direct_aliases": "Suorat alias osoitteet",
         "direct_aliases_desc": "Roska posti suodatus-ja TLS-käytäntö asetukset vaikuttavat suora aliaksen osoitteisiin.",
         "eas_reset": "Tyhjennä ActiveSync-laitteen väli muisti",

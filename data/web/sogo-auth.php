@@ -47,11 +47,15 @@ elseif (isset($_GET['login'])) {
     (($_SESSION['acl']['login_as'] == "1" && $ALLOW_ADMIN_EMAIL_LOGIN !== 0) || ($is_dual === false && $login == $_SESSION['mailcow_cc_username']))) {
     if (filter_var($login, FILTER_VALIDATE_EMAIL)) {
       if (user_get_alias_details($login) !== false) {
-        // load master password
-        $sogo_sso_pass = file_get_contents("/etc/sogo-sso/sogo-sso.pass");
-        // register username and password in session
+        // register username in session
         $_SESSION[$session_var_user_allowed][] = $login;
-        $_SESSION[$session_var_pass] = $sogo_sso_pass;
+        // set dual login
+        if ($_SESSION['acl']['login_as'] == "1" && $ALLOW_ADMIN_EMAIL_LOGIN !== 0 && $is_dual === false && $_SESSION['mailcow_cc_role'] != "user"){
+          $_SESSION["dual-login"]["username"] = $_SESSION['mailcow_cc_username'];
+          $_SESSION["dual-login"]["role"]     = $_SESSION['mailcow_cc_role'];
+          $_SESSION['mailcow_cc_username']    = $login;
+          $_SESSION['mailcow_cc_role']        = "user";
+        }
         // update sasl logs
         $service = ($app_passwd_data['eas'] === true) ? 'EAS' : 'DAV';
         $stmt = $pdo->prepare("REPLACE INTO sasl_log (`service`, `app_password`, `username`, `real_rip`) VALUES ('SSO', 0, :username, :remote_addr)");
@@ -65,14 +69,18 @@ elseif (isset($_GET['login'])) {
       }
     }
   }
-  header('HTTP/1.0 403 Forbidden');
-  echo "Forbidden";
+  header("Location: /");
   exit;
 }
 // only check for admin-login on sogo GUI requests
 elseif (isset($_SERVER['HTTP_X_ORIGINAL_URI']) && strcasecmp(substr($_SERVER['HTTP_X_ORIGINAL_URI'], 0, 9), "/SOGo/so/") === 0) {
   // this is an nginx auth_request call, we check for existing sogo-sso session variables
-  session_start();
+  require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/vars.inc.php';
+  if (file_exists($_SERVER['DOCUMENT_ROOT'] . '/inc/vars.local.inc.php')) {
+    include_once $_SERVER['DOCUMENT_ROOT'] . '/inc/vars.local.inc.php';
+  }
+  require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/sessions.inc.php';
+
   // extract email address from "/SOGo/so/user@domain/xy"
   $url_parts = explode("/", $_SERVER['HTTP_X_ORIGINAL_URI']);
   $email_list = array(
@@ -86,10 +94,11 @@ elseif (isset($_SERVER['HTTP_X_ORIGINAL_URI']) && strcasecmp(substr($_SERVER['HT
         !empty($email) &&
         filter_var($email, FILTER_VALIDATE_EMAIL) &&
         is_array($_SESSION[$session_var_user_allowed]) &&
-        in_array($email, $_SESSION[$session_var_user_allowed])
+        in_array($email, $_SESSION[$session_var_user_allowed]) &&
+        !$_SESSION['pending_pw_update']
     ) {
       $username = $email;
-      $password = $_SESSION[$session_var_pass];
+      $password = file_get_contents("/etc/sogo-sso/sogo-sso.pass");
       header("X-User: $username");
       header("X-Auth: Basic ".base64_encode("$username:$password"));
       header("X-Auth-Type: Basic");

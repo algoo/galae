@@ -1,5 +1,6 @@
-FROM alpine:3.18
-LABEL maintainer "The Infrastructure Company GmbH <info@servercow.de>"
+FROM alpine:3.21
+
+LABEL maintainer = "The Infrastructure Company GmbH <info@servercow.de>"
 
 # Installation
 RUN apk add --update \
@@ -36,4 +37,4 @@ RUN apk add --update \
 COPY watchdog.sh /watchdog.sh
 COPY check_mysql_slavestatus.sh /usr/lib/nagios/plugins/check_mysql_slavestatus.sh
 
-CMD /watchdog.sh
+CMD ["/watchdog.sh"]
