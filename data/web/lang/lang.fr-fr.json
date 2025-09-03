@@ -537,7 +537,7 @@
         "img_dimensions_exceeded": "L'image dépasse les dimensions maximales",
         "img_size_exceeded": "L'image dépasse la taille maximale de fichier",
         "alias_wildcard_domain_mismatch": "Le domaine de l'alias ne peut pas être modifié, veuillez supprimer l'alias et en créer un nouveau.",
-        "alias_wildcard_invalid": "Un alias générique doit contenir un et un seul \"*\" dans la partie locale de son e-mail"
+        "alias_wildcard_invalid": "Un alias générique doit contenir un et un seul \"*\" dans la partie locale de son e-mail",
         "webauthn_publickey_failed": "Aucune clé publique n'a été stockée pour l'authentificateur sélectionné",
         "cors_invalid_method": "Allow-Method specifiée invalide",
         "cors_invalid_origin": "Allow-Origin spécifiée invalide",
@@ -710,7 +710,7 @@
         "alias_wildcard": "Editer l'alias générique",
         "domain_alias_options": "Options d'alias",
         "domain_alias_wildcard": "Permettre la création d'alias d'e-mail avec un caractère de substitution <small>(ellen*@wayland-yutani.earth)</small>",
-        "domain_alias_wildcard_info": "<div class=\"badge fs-6 bg-warning\">Attention</div> Cette option autorise tous les administrateurs du domaine à créer des alias d'e-mail avec un caractère de substitution \"*\". Un alias générique ne remplacera jamais une boîte aux lettres existante."
+        "domain_alias_wildcard_info": "<div class=\"badge fs-6 bg-warning\">Attention</div> Cette option autorise tous les administrateurs du domaine à créer des alias d'e-mail avec un caractère de substitution \"*\". Un alias générique ne remplacera jamais une boîte aux lettres existante.",
         "acl": "ACL (Permission)",
         "footer_exclude": "Exclure du pied de page",
         "custom_attributes": "Attributs personnalisés",
@@ -950,7 +950,7 @@
         "yes": "&#10003;",
         "add_alias_wildcard": "Ajouter un alias générique",
         "allow_aliases_wildcard": "Alias générique",
-        "is_wildcard_alias": "Est un alias générique"
+        "is_wildcard_alias": "Est un alias générique",
         "add_alias_expand": "Étendre l'alias aux alias de domaine",
         "catch_all": "Catch-All",
         "created_on": "Créé le",
