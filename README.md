@@ -19,11 +19,11 @@ MailCow issues states are represent with the following emoji:
 - ☑️ Closed with no implementation
 - ✅ Closed as completed
 
-| Functionality              | Galae Issues | Corresponding MailCow Issues / PR                                                                                                                                                                                                            |
-|----------------------------|--------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Replace mysql socket by ip | #1, #9       | ⛔️ mailcow/mailcow-dockerized#190, <br> ✅ mailcow/mailcow-dockerized#456, <br> 👥 mailcow/mailcow-dockerized#1539, <br> 👥 mailcow/mailcow-dockerized#1774, <br> 👥 mailcow/mailcow-dockerized#5395, <br> ⏳️ mailcow/mailcow-dockerized#5869 |
-| Allow local_part to be "0" | #7           | ⏳️ mailcow/mailcow-dockerized#5190, <br> ⛔️ mailcow/mailcow-dockerized#5563 with PR ⛔️ mailcow/mailcow-dockerized#5565 and ❌ mailcow/mailcow-dockerized#5619                                                                                 |
-| Wildcard email alias       | #3, #13, #16 | ❌ mailcow/mailcow-dockerized#1787, <br>  ☑️ mailcow/mailcow-dockerized#2077 with PR ❌ mailcow/mailcow-dockerized#5881, <br> ❌ mailcow/mailcow-dockerized#2507 with PR ⏳️ mailcow/mailcow-dockerized#4015                                     |
+| Functionality              | Galae Issues                                  | Corresponding MailCow Issues / PR                                                                                                                                                                                                            |
+|----------------------------|-----------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Replace mysql socket by ip | algoo/galae#1, algoo/galae#9                  | ⛔️ mailcow/mailcow-dockerized#190, <br> ✅ mailcow/mailcow-dockerized#456, <br> 👥 mailcow/mailcow-dockerized#1539, <br> 👥 mailcow/mailcow-dockerized#1774, <br> 👥 mailcow/mailcow-dockerized#5395, <br> ⏳️ mailcow/mailcow-dockerized#5869 |
+| Allow local_part to be "0" | algoo/galae#7                                 | ⏳️ mailcow/mailcow-dockerized#5190, <br> ⛔️ mailcow/mailcow-dockerized#5563 with PR ⛔️ mailcow/mailcow-dockerized#5565 and ❌ mailcow/mailcow-dockerized#5619                                                                                 |
+| Wildcard email alias       | algoo/galae#3, algoo/galae#13, algoo/galae#16 | ❌ mailcow/mailcow-dockerized#1787, <br>  ☑️ mailcow/mailcow-dockerized#2077 with PR ❌ mailcow/mailcow-dockerized#5881, <br> ❌ mailcow/mailcow-dockerized#2507 with PR ⏳️ mailcow/mailcow-dockerized#4015                                     |
 
 
 ## Update existing MailCow installation for Galae wildcard aliases support
