@@ -9,7 +9,7 @@ Those modifications were submitted to the upstream but aren't yet implemented.
 
 ## MailCow customizations
 
-Here are a list of Galae customizations, with their corresponding issues and PR both on Galae and MailCow sides. Note that since initial Galae implementation, subsequent commits were made when merging from upstream (MailCow to Galae).
+Here is a list of Galae customizations, with their corresponding issues and PR both on Galae and MailCow sides. Note that since initial Galae implementation, subsequent commits were made when merging from upstream (MailCow to Galae).
 
 MailCow issues and PR states are represent with the following emoji:
 - ⏳️ Still open
