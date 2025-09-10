@@ -33,7 +33,7 @@ if [[ ! -p /tmp/com_pipe ]]; then
 fi
 
 # Wait for containers
-while ! mariadb-admin status --ssl=false --host=${DBHOST} --port=${DBPORT} -u${DBUSER} -p${DBPASS} --silent; do
+while ! mariadb-admin status --ssl=false --host=${DBHOST} --port=${DBPORT} --user=${DBUSER} --password=${DBPASS} --silent; do
   echo "Waiting for SQL..."
   sleep 2
 done
@@ -234,7 +234,7 @@ external_checks() {
   diff_c=0
   THRESHOLD=${EXTERNAL_CHECKS_THRESHOLD}
   # Reduce error count by 2 after restarting an unhealthy container
-  GUID=$(mariadb --skip-ssl --host=${DBHOST} --port=${DBPORT} -u ${DBUSER} -p ${DBPASS} ${DBNAME} -e "SELECT version FROM versions WHERE application = 'GUID'" -BN)
+  GUID=$(mariadb --skip-ssl --host=${DBHOST} --port=${DBPORT} --user=${DBUSER} --password=${DBPASS} ${DBNAME} -e "SELECT version FROM versions WHERE application = 'GUID'" -BN)
   trap "[ ${err_count} -gt 1 ] && err_count=$(( ${err_count} - 2 ))" USR1
   while [ ${err_count} -lt ${THRESHOLD} ]; do
     err_c_cur=${err_count}
