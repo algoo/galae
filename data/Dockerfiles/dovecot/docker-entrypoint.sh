@@ -2,7 +2,7 @@
 set -e
 
 # Wait for MySQL to warm-up
-while ! mariadb-admin status --ssl=false --host=${DBHOST} --port=${DBPORT} -u${DBUSER} -p${DBPASS} --silent; do
+while ! mariadb-admin status --ssl=false --host=${DBHOST} --port=${DBPORT} --user=${DBUSER} --password${DBPASS} --silent; do
   echo "Waiting for database to come up..."
   sleep 2
 done
@@ -297,15 +297,15 @@ printenv | sed 's/^\(.*\)$/export \1/g' > /source_env.sh
 
 # Clean stopped imapsync jobs
 rm -f /tmp/imapsync_busy.lock
-IMAPSYNC_TABLE=$(mariadb --skip-ssl --host=${DBHOST} --port=${DBPORT} -u ${DBUSER} -p ${DBPASS} ${DBNAME} -e "SHOW TABLES LIKE 'imapsync'" -Bs)
-[[ ! -z ${IMAPSYNC_TABLE} ]] && mariadb --skip-ssl --host=${DBHOST} --port=${DBPORT} -u ${DBUSER} -p ${DBPASS} ${DBNAME} -e "UPDATE imapsync SET is_running='0'"
+IMAPSYNC_TABLE=$(mariadb --skip-ssl --host=${DBHOST} --port=${DBPORT} --user=${DBUSER} --password=${DBPASS} ${DBNAME} -e "SHOW TABLES LIKE 'imapsync'" -Bs)
+[[ ! -z ${IMAPSYNC_TABLE} ]] && mariadb --skip-ssl --host=${DBHOST} --port=${DBPORT} --user=${DBUSER} --password=${DBPASS} ${DBNAME} -e "UPDATE imapsync SET is_running='0'"
 
 # Envsubst maildir_gc
 echo "$(envsubst < /usr/local/bin/maildir_gc.sh)" > /usr/local/bin/maildir_gc.sh
 
 # GUID generation
 while [[ ${VERSIONS_OK} != 'OK' ]]; do
-  if [[ ! -z $(mariadb --skip-ssl --host=${DBHOST} --port=${DBPORT} -u ${DBUSER} -p ${DBPASS} ${DBNAME} -B -e "SELECT 'OK' FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = \"${DBNAME}\" AND TABLE_NAME = 'versions'") ]]; then
+  if [[ ! -z $(mariadb --skip-ssl --host=${DBHOST} --port=${DBPORT} --user=${DBUSER} --password=${DBPASS} ${DBNAME} -B -e "SELECT 'OK' FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = \"${DBNAME}\" AND TABLE_NAME = 'versions'") ]]; then
     VERSIONS_OK=OK
   else
     echo "Waiting for versions table to be created..."
@@ -316,11 +316,11 @@ PUBKEY_MCRYPT=$(doveconf -P 2> /dev/null | grep -i mail_crypt_global_public_key 
 if [ -f ${PUBKEY_MCRYPT} ]; then
   GUID=$(cat <(echo ${MAILCOW_HOSTNAME}) /mail_crypt/ecpubkey.pem | sha256sum | cut -d ' ' -f1 | tr -cd "[a-fA-F0-9.:/] ")
   if [ ${#GUID} -eq 64 ]; then
-    mariadb --skip-ssl --host=${DBHOST} --port=${DBPORT} -u ${DBUSER} -p ${DBPASS} ${DBNAME} << EOF
+    mariadb --skip-ssl --host=${DBHOST} --port=${DBPORT} --user=${DBUSER} --password=${DBPASS} ${DBNAME} << EOF
 REPLACE INTO versions (application, version) VALUES ("GUID", "${GUID}");
 EOF
   else
-    mariadb --skip-ssl --host=${DBHOST} --port=${DBPORT} -u ${DBUSER} -p ${DBPASS} ${DBNAME} << EOF
+    mariadb --skip-ssl --host=${DBHOST} --port=${DBPORT} --user=${DBUSER} --password=${DBPASS} ${DBNAME} << EOF
 REPLACE INTO versions (application, version) VALUES ("GUID", "INVALID");
 EOF
   fi
