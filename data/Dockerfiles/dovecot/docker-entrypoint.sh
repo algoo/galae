@@ -2,7 +2,7 @@
 set -e
 
 # Wait for MySQL to warm-up
-while ! mariadb-admin status --ssl=false --host=${DBHOST} --port=${DBPORT} --user=${DBUSER} --password${DBPASS} --silent; do
+while ! mariadb-admin status --ssl=false --host=${DBHOST} --port=${DBPORT} --user=${DBUSER} --password=${DBPASS} --silent; do
   echo "Waiting for database to come up..."
   sleep 2
 done
