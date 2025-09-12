@@ -1,71 +1,34 @@
-# mailcow: dockerized - 🐮 + 🐋 = 💕
+# Galae : a Mailcow Algoo fork
 
-[![Translation status](https://translate.mailcow.email/widgets/mailcow-dockerized/-/translation/svg-badge.svg)](https://translate.mailcow.email/engage/mailcow-dockerized/)
-[![Twitter URL](https://img.shields.io/twitter/url/https/twitter.com/mailcow_email.svg?style=social&label=Follow%20%40mailcow_email)](https://twitter.com/mailcow_email)
-![Mastodon Follow](https://img.shields.io/mastodon/follow/109388212176073348?domain=https%3A%2F%2Fmailcow.social&label=Follow%20%40doncow%40mailcow.social&link=https%3A%2F%2Fmailcow.social%2F%40doncow)
+Galae is a [MailCow](https://github.com/mailcow/mailcow-dockerized) fork managed by the [Algoo](https://www.algoo.fr/) company.
+
+It was created with two guiding principles:
+1. Implement missing functionalities mandatory for the [Galae service](https://galae.net/) launch (see below for a complete list)
+2. Build a scalable production ready stack.
 
 
-## Want to support mailcow?
+## MailCow customizations
 
-Please [consider a support contract with Servercow](https://www.servercow.de/mailcow?lang=en#support) to support further development. _We_ support _you_ while _you_ support _us_. :)
+Here is a list of Galae customizations submitted to Mailcow but not yet implemented, with their corresponding issues and PR both on Galae and MailCow sides. Note that since initial Galae implementation, subsequent commits were made when merging from upstream (MailCow to Galae).
 
-You can also [get a SAL](https://www.servercow.de/mailcow?lang=en#sal) which is a one-time payment with no liabilities or returning fees.
+MailCow issues and PR states are represent with the following emoji:
+- ⏳️ Still open
+- ❌ Closed as staled
+- 👥 Closed as duplicate
+- ⛔️ Closed as refused
+- ☑️ Closed with no implementation
+- ✅ Closed as completed
 
-Or just spread the word: moo.
+| Functionality                                | Galae Issues                                  | Corresponding MailCow Issues / PR                                                                                                                                                                                                                                                     |
+|----------------------------------------------|-----------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| DB : allow to use external server            | algoo/galae#1, algoo/galae#9                  | ⛔️ mailcow/mailcow-dockerized#190, <br> ✅ mailcow/mailcow-dockerized#456, <br> 👥 mailcow/mailcow-dockerized#1539, <br> 👥 mailcow/mailcow-dockerized#1774, <br> ⛔️ mailcow/mailcow-dockerized#5395, <br> 👥 mailcow/mailcow-dockerized#5437, <br> ⏳️ mailcow/mailcow-dockerized#5869 |
+| Allow "0" as local_part (eg "0@example.com") | algoo/galae#7                                 | ⏳️ mailcow/mailcow-dockerized#5190, <br> ⛔️ mailcow/mailcow-dockerized#5563 with PR ⛔️ mailcow/mailcow-dockerized#5565 and ❌ mailcow/mailcow-dockerized#5619                                                                                                                          |
+| Wildcard email alias                         | algoo/galae#3, algoo/galae#13, algoo/galae#16 | ❌ mailcow/mailcow-dockerized#1787, <br>  ☑️ mailcow/mailcow-dockerized#2077 with PR ❌ mailcow/mailcow-dockerized#5881, <br> ❌ mailcow/mailcow-dockerized#2507 with PR ⏳️ mailcow/mailcow-dockerized#4015                                                                              |
 
-## Many thanks to our GitHub Sponsors ❤️
-A big thank you to everyone supporting us on GitHub Sponsors—your contributions mean the world to us! Special thanks to the following amazing supporters:
 
-### 100$/Month Sponsors
-  <a href="https://www.colba.net/" target=_blank><img
-    src="https://avatars.githubusercontent.com/u/204464723" height="58"
-  /></a>
-  <a href="https://www.maehdros.com/" target=_blank><img
-    src="https://avatars.githubusercontent.com/u/173894712" height="58"
-  /></a>
-  <a href="https://macarne.com/" target=_blank><img
-    src="https://avatars.githubusercontent.com/u/149550368?s=200&v=4" height="58"
-  /></a>
+## Update existing MailCow installation for Galae wildcard aliases support
 
-### 50$/Month Sponsors
-  <a href="https://github.com/vnukhr" target=_blank><img
-    src="https://avatars.githubusercontent.com/u/7805987?s=52&v=4" height="58"
-  /></a>
-
-## Info, documentation and support
-
-Please see [the official documentation](https://docs.mailcow.email/) for installation and support instructions. 🐄
-
-🐛 **If you found a critical security issue, please mail us to [info at servercow.de](mailto:info@servercow.de).**
-
-## Cowmunity
-
-[mailcow community](https://community.mailcow.email)
-
-[Telegram mailcow channel](https://telegram.me/mailcow)
-
-[Telegram mailcow Off-Topic channel](https://t.me/mailcowOfftopic)
-
-[Official 𝕏 (Twitter) Account](https://twitter.com/mailcow_email)
-
-[Official Mastodon Account](https://mailcow.social/@doncow)
-
-Telegram desktop clients are available for [multiple platforms](https://desktop.telegram.org). You can search the groups history for keywords.
-
-## Misc
-
-**Important**: mailcow makes use of various open-source software. Please assure you agree with their license before using mailcow.
-Any part of mailcow itself is released under **GNU General Public License, Version 3**.
-
-mailcow is a registered word mark of The Infrastructure Company GmbH, Parkstr. 42, 47877 Willich, Germany.
-
-The project is managed and maintained by The Infrastructure Company GmbH.
-
-Originated from @andryyy (André)
-
-## Update existing installation for wildcard aliases support
-
-The wildcard aliases support introduced in [this PR](https://github.com/algoo/galae/pull/5) requires a database schema update for existing mailcow installations. For the moment, this need
+The wildcard aliases support introduced in PR #5 requires a database schema update for existing mailcow installations. For the moment, this need
 to be done manually. Below is a (very) succinct explanation:
 
 - connect to the MySQL mailcow database
