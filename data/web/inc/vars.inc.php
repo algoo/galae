@@ -83,6 +83,7 @@ $DEFAULT_LANG = 'en-gb';
 // https://en.wikipedia.org/wiki/IETF_language_tag
 $AVAILABLE_LANGUAGES = array(
   // 'ca-es' => 'Català (Catalan)',
+  'bg-bg' => 'Български (Bulgarian)',
   'cs-cz' => 'Čeština (Czech)',
   'da-dk' => 'Danish (Dansk)',
   'de-de' => 'Deutsch (German)',
@@ -185,6 +186,12 @@ $MAILBOX_DEFAULT_ATTRIBUTES['force_pw_update'] = false;
 // Enable SOGo access - Users will be redirected to SOGo after login (set to false to disable redirect by default)
 $MAILBOX_DEFAULT_ATTRIBUTES['sogo_access'] = true;
 
+// How to handle tagged emails
+// none      - No special handling
+// subfolder - Create subfolder under INBOX (e.g. "INBOX/Facebook")
+// subject   - Add tag to subject (e.g. "[Facebook] Subject")
+$MAILBOX_DEFAULT_ATTRIBUTES['tagged_mail_handler'] = "none";
+
 // Send notification when quarantine is not empty (never, hourly, daily, weekly)
 $MAILBOX_DEFAULT_ATTRIBUTES['quarantine_notification'] = 'hourly';
 
@@ -237,12 +244,12 @@ $FIDO2_FORMATS = array('apple', 'android-key', 'android-safetynet', 'fido-u2f', 
 // Set visible Rspamd maps in mailcow UI, do not change unless you know what you are doing
 $RSPAMD_MAPS = array(
   'regex' => array(
-    'Header-From: Blacklist' => 'global_mime_from_blacklist.map',
-    'Header-From: Whitelist' => 'global_mime_from_whitelist.map',
-    'Envelope Sender Blacklist' => 'global_smtp_from_blacklist.map',
-    'Envelope Sender Whitelist' => 'global_smtp_from_whitelist.map',
-    'Recipient Blacklist' => 'global_rcpt_blacklist.map',
-    'Recipient Whitelist' => 'global_rcpt_whitelist.map',
+    'Header-From: Denylist' => 'global_mime_from_blacklist.map',
+    'Header-From: Allowlist' => 'global_mime_from_whitelist.map',
+    'Envelope Sender Denylist' => 'global_smtp_from_blacklist.map',
+    'Envelope Sender Allowlist' => 'global_smtp_from_whitelist.map',
+    'Recipient Denylist' => 'global_rcpt_blacklist.map',
+    'Recipient Allowlist' => 'global_rcpt_whitelist.map',
     'Fishy TLDS (only fired in combination with bad words)' => 'fishy_tlds.map',
     'Bad Words (only fired in combination with fishy TLDs)' => 'bad_words.map',
     'Bad Words DE (only fired in combination with fishy TLDs)' => 'bad_words_de.map',
