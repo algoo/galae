@@ -50,6 +50,10 @@ cat <<EOF > /var/lib/sogo/GNUstep/Defaults/sogod.plist
     <string>YES</string>
     <key>SOGoEncryptionKey</key>
     <string>${RAND_PASS}</string>
+    <key>SOGoURLEncryptionEnabled</key>
+    <string>YES</string>
+    <key>SOGoURLEncryptionPassphrase</key>
+    <string>${SOGO_URL_ENCRYPTION_KEY}</string>
     <key>OCSAdminURL</key>
     <string>mysql://${DBUSER}:${DBPASS}@${DBHOST}:${DBPORT}/${DBNAME}/sogo_admin</string>
     <key>OCSCacheFolderURL</key>
