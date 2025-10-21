@@ -1006,11 +1006,26 @@ function edit_user_account($_data) {
     update_sogo_static_view();
   }
   // edit password recovery email
-  elseif (isset($pw_recovery_email)) {
+  elseif (!empty($password_old) && isset($pw_recovery_email)) {
     if (!isset($_SESSION['acl']['pw_reset']) || $_SESSION['acl']['pw_reset'] != "1" ) {
       $_SESSION['return'][] = array(
         'type' => 'danger',
         'log' => array(__FUNCTION__, $_action, $_type, $_data_log, $_attr),
+        'msg' => 'access_denied'
+      );
+      return false;
+    }
+
+    $stmt = $pdo->prepare("SELECT `password` FROM `mailbox`
+        WHERE `kind` NOT REGEXP 'location|thing|group'
+          AND `username` = :user AND authsource = 'mailcow'");
+    $stmt->execute(array(':user' => $username));
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!verify_hash($row['password'], $password_old)) {
+      $_SESSION['return'][] =  array(
+        'type' => 'danger',
+        'log' => array(__FUNCTION__, $_data_log),
         'msg' => 'access_denied'
       );
       return false;
@@ -1107,11 +1122,21 @@ function user_get_alias_details($username) {
   }
   return $data;
 }
-function is_valid_domain_name($domain_name) {
+function is_valid_domain_name($domain_name, $options = array()) {
   if (empty($domain_name)) {
     return false;
   }
+
+  // Convert domain name to ASCII for validation
   $domain_name = idn_to_ascii($domain_name, 0, INTL_IDNA_VARIANT_UTS46);
+
+  if (isset($options['allow_wildcard']) && $options['allow_wildcard'] == true) {
+    // Remove '*.' if wildcard subdomains are allowed
+    if (strpos($domain_name, '*.') === 0) {
+      $domain_name = substr($domain_name, 2);
+    }
+  }
+
   return (preg_match("/^([a-z\d](-*[a-z\d])*)(\.([a-z\d](-*[a-z\d])*))*$/i", $domain_name)
        && preg_match("/^.{1,253}$/", $domain_name)
        && preg_match("/^[^\.]{1,63}(\.[^\.]{1,63})*$/", $domain_name));
@@ -2211,7 +2236,7 @@ function cors($action, $data = null) {
       $cors_settings['allowed_origins'] = $allowed_origins[0];
       if (in_array('*', $allowed_origins)){
         $cors_settings['allowed_origins'] = '*';
-      } else if (in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+      } else if (array_key_exists('HTTP_ORIGIN', $_SERVER) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
         $cors_settings['allowed_origins'] = $_SERVER['HTTP_ORIGIN'];
       }
       // always allow OPTIONS for preflight request

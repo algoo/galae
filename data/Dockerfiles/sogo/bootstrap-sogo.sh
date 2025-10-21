@@ -24,6 +24,10 @@ while [[ "${DBV_NOW}" != "${DBV_NEW}" ]]; do
 done
 echo "DB schema is ${DBV_NOW}"
 
+if [[ "${MASTER}" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
+  mariadb --skip-ssl --socket=/var/run/mysqld/mysqld.sock -u ${DBUSER} -p${DBPASS} ${DBNAME} -e "DROP TRIGGER IF EXISTS sogo_update_password"
+fi
+
 # cat /dev/urandom seems to hang here occasionally and is not recommended anyway, better use openssl
 RAND_PASS=$(openssl rand -base64 16 | tr -dc _A-Z-a-z-0-9)
 
@@ -46,6 +50,10 @@ cat <<EOF > /var/lib/sogo/GNUstep/Defaults/sogod.plist
     <string>YES</string>
     <key>SOGoEncryptionKey</key>
     <string>${RAND_PASS}</string>
+    <key>SOGoURLEncryptionEnabled</key>
+    <string>YES</string>
+    <key>SOGoURLEncryptionPassphrase</key>
+    <string>${SOGO_URL_ENCRYPTION_KEY}</string>
     <key>OCSAdminURL</key>
     <string>mysql://${DBUSER}:${DBPASS}@${DBHOST}:${DBPORT}/${DBNAME}/sogo_admin</string>
     <key>OCSCacheFolderURL</key>

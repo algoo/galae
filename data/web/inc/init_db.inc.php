@@ -4,7 +4,7 @@ function init_db_schema()
   try {
     global $pdo;
 
-    $db_version = "27012025_1555";
+    $db_version = "07102025_1015";
 
     $stmt = $pdo->query("SHOW TABLES LIKE 'versions'");
     $num_results = count($stmt->fetchAll(PDO::FETCH_ASSOC));
@@ -185,6 +185,7 @@ function init_db_schema()
           "public_comment" => "TEXT",
           "is_wildcard" => "TINYINT(1) NOT NULL DEFAULT '0'",
           "sogo_visible" => "TINYINT(1) NOT NULL DEFAULT '1'",
+          "internal" => "TINYINT(1) NOT NULL DEFAULT '0'",
           "active" => "TINYINT(1) NOT NULL DEFAULT '1'"
         ),
         "keys" => array(
@@ -347,10 +348,14 @@ function init_db_schema()
           "notified" => "TINYINT(1) NOT NULL DEFAULT '0'",
           "created" => "DATETIME(0) NOT NULL DEFAULT NOW(0)",
           "user" => "VARCHAR(255) NOT NULL DEFAULT 'unknown'",
+          "qhash" => "VARCHAR(64)",
         ),
         "keys" => array(
           "primary" => array(
             "" => array("id")
+          ),
+          "key" => array(
+            "qhash" => array("qhash")
           )
         ),
         "attr" => "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
@@ -469,6 +474,23 @@ function init_db_schema()
               "delete" => "CASCADE",
               "update" => "NO ACTION"
             )
+          )
+        ),
+        "attr" => "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
+      ),
+      "mta_sts" => array(
+        "cols" => array(
+          "id" => "BIGINT NOT NULL",
+          "domain" => "VARCHAR(255) NOT NULL",
+          "version" => "VARCHAR(255) NOT NULL",
+          "mode" => "VARCHAR(255) NOT NULL",
+          "mx" => "VARCHAR(255) NOT NULL",
+          "max_age" => "VARCHAR(255) NOT NULL",
+          "active" => "TINYINT(1) NOT NULL DEFAULT '1'"
+        ),
+        "keys" => array(
+          "primary" => array(
+            "" => array("domain")
           )
         ),
         "attr" => "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC"
@@ -1317,6 +1339,14 @@ function init_db_schema()
       $pdo->query($create);
     }
 
+    // Clear old app_passwd log entries
+    $pdo->exec("DELETE FROM logs
+      WHERE role != 'unauthenticated'
+        AND JSON_EXTRACT(`call`, '$[0]') = 'app_passwd'
+        AND JSON_EXTRACT(`call`, '$[1]') = 'edit'
+        AND (JSON_CONTAINS_PATH(`call`, 'one', '$[2].password')
+          OR JSON_CONTAINS_PATH(`call`, 'one', '$[2].password2'));");
+
     // Mitigate imapsync argument injection issue
     $pdo->query("UPDATE `imapsync` SET `custom_params` = ''
       WHERE `custom_params` LIKE '%pipemess%'
@@ -1484,6 +1514,10 @@ function init_db_schema()
         'msg' => 'db_init_complete'
       );
     }
+
+    // fill quarantine.qhash
+    $pdo->query("UPDATE `quarantine` SET `qhash` = SHA2(CONCAT(`id`, `qid`), 256) WHERE ISNULL(`qhash`)");
+
   } catch (PDOException $e) {
     if (php_sapi_name() == "cli") {
       echo "DB initialization failed: " . print_r($e, true) . PHP_EOL;
