@@ -25,7 +25,7 @@ done
 echo "DB schema is ${DBV_NOW}"
 
 if [[ "${MASTER}" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
-  mariadb --skip-ssl --socket=/var/run/mysqld/mysqld.sock -u ${DBUSER} -p${DBPASS} ${DBNAME} -e "DROP TRIGGER IF EXISTS sogo_update_password"
+  mariadb --skip-ssl --host=${DBHOST} --port=${DBPORT} --user=${DBUSER} --password=${DBPASS} ${DBNAME} -e "DROP TRIGGER IF EXISTS sogo_update_password"
 fi
 
 # cat /dev/urandom seems to hang here occasionally and is not recommended anyway, better use openssl
