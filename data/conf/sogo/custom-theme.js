@@ -37,6 +37,8 @@
 
 
 
+//--- This is a simple example kept for archive
+// Only switching to a specific palette without changing anything else
 // Material doc adapted for for SOGo
 // https://material.angularjs.org/latest/Theming/03_configuring_a_theme#configuring-a-theme
 /*
@@ -63,7 +65,7 @@
 
 
 
-// Galae specific colors
+//--- Galae specific colors
 (function() {
   'use strict';
   angular.module('SOGo.Common')
