@@ -1,0 +1,4 @@
+services:
+  sogo-mailcow:
+    volumes:
+      - ./data/conf/sogo/custom-theme.css:/usr/lib/GNUstep/SOGo/WebServerResources/css/theme-default.css:z
