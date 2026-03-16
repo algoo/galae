@@ -76,7 +76,7 @@
 
     // define Galae palette from SOGo "sogo-blue"
     const GALAE_LOGO_LIGHT = '219ebc';
-    const GALAE_LOGO_MEDIUM = '4faacb'; // not in the Galae logo but between DARK and LIGHT
+    const GALAE_LOGO_MEDIUM = '6AB7D2'; // not in the Galae logo but between DARK and LIGHT
     const GALAE_LOGO_DARK = '8ecae6';
     var algooBlue = $mdThemingProvider.extendPalette('sogo-blue', {
       '100': GALAE_LOGO_DARK,
