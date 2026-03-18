@@ -79,11 +79,15 @@
     const GALAE_LOGO_MEDIUM = '6AB7D2'; // not in the Galae logo but between DARK and LIGHT
     const GALAE_LOGO_DARK = '8ecae6';
     var algooBlue = $mdThemingProvider.extendPalette('sogo-blue', {
+      // possible values: 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, A100, A200, A400, A700
+      // the lowest the value the brighter
+      // See https://m1.material.io/style/color.html#color-color-palette
+      // WARNING: 700 is used for calendar day view time foreground color
+      '50': 'ffffff',
       '100': GALAE_LOGO_DARK,
       '200': GALAE_LOGO_MEDIUM,
       '500': GALAE_LOGO_LIGHT,
       '600': GALAE_LOGO_LIGHT,
-      '700' : 'ffffff',
     });
     $mdThemingProvider.definePalette('algoo-blue', algooBlue);
 
@@ -102,7 +106,7 @@
       })
       .accentPalette(predominant_color, {
         'default': '100',  // background color of fab buttons and login screen
-        'hue-1':   '700',  // background color of center list toolbar
+        'hue-1':   '50',  // background color of center list toolbar
         'hue-2':   '200',  // highlight color for selected mail and current day calendar
         'hue-3':   '500',  // new mail button hover color
       });
