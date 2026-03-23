@@ -41,7 +41,7 @@
 // Only switching to a specific palette without changing anything else
 // Material doc adapted for for SOGo
 // https://material.angularjs.org/latest/Theming/03_configuring_a_theme#configuring-a-theme
-/*
+// Using SOGo code in UI/WebServerResources/js/Common.js
 (function() {
   'use strict';
   angular.module('SOGo.Common')
@@ -49,23 +49,22 @@
 
   configure.$inject = ['$mdThemingProvider'];
   function configure($mdThemingProvider) {
-
-    // Pick a color pallete: 'indigo', 'teal', 'cyan', 'blue', 'light-freen' etc.
-    // https://m1.material.io/style/color.html#color-color-palette
-    var predominant_color = 'blue-grey'
+    var predominant_color = 'sogo-blue';
 
     $mdThemingProvider.theme('default')
-      .primaryPalette('light-blue')
-      .accentPalette('blue');
-
+      .primaryPalette(predominant_color)
+      .accentPalette(predominant_color)
+//      .primaryPalette(predominant_color, { default: '900', 'hue-1': '400', 'hue-2': '800', 'hue-3': 'A700' })
+//      .accentPalette(predominant_color, { default: '500', 'hue-1': 'A100', 'hue-2': '300', 'hue-3': 'A700' })
+      .backgroundPalette("sogo-grey");
     $mdThemingProvider.generateThemesOnDemand(false);
   }
 })();
-*/
 
 
 
 //--- Galae specific colors
+/*
 (function() {
   'use strict';
   angular.module('SOGo.Common')
@@ -114,3 +113,4 @@
     $mdThemingProvider.generateThemesOnDemand(false);
   }
 })();
+*/
