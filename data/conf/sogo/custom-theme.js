@@ -209,7 +209,10 @@
     // https://m1.material.io/style/color.html#color-color-palette
     // SOGo defines some more palettes: sogo-blue, sogo-green, sogo-grey
     // See /usr/lib/GNUstep/SOGo/WebServerResources/js/Common.js
-    var predominant_color = 'sogo-galae-first'
+    //var predominant_color = 'sogo-galae-first'
+    var predominant_color = 'sogo-galae-lighter'
+    //var predominant_color = 'sogo-galae-first-with-a100-fafafa-like-original'
+    //var predominant_color = 'sogo-galae-lighter-with-a100-fafafa-like-original'
 
     $mdThemingProvider.theme('default')
       .primaryPalette(predominant_color, {
