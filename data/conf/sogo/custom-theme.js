@@ -56,7 +56,8 @@
       .accentPalette(predominant_color)
 //      .primaryPalette(predominant_color, { default: '900', 'hue-1': '400', 'hue-2': '800', 'hue-3': 'A700' })
 //      .accentPalette(predominant_color, { default: '500', 'hue-1': 'A100', 'hue-2': '300', 'hue-3': 'A700' })
-      .backgroundPalette("sogo-grey");
+      .backgroundPalette('sogo-grey');
+//      .backgroundPalette(predominant_color);
     $mdThemingProvider.generateThemesOnDemand(false);
   }
 })();
