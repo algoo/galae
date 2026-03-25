@@ -53,10 +53,13 @@
     var predominant_color = 'sogo-blue';
 
     $mdThemingProvider.theme('default')
+      // palettes with no overrides
       .primaryPalette(predominant_color)
       .accentPalette(predominant_color)
+      // palettes with original overrides (UI/WebServerResources/js/Common.js)
 //      .primaryPalette(predominant_color, { default: '900', 'hue-1': '400', 'hue-2': '800', 'hue-3': 'A700' })
 //      .accentPalette(predominant_color, { default: '500', 'hue-1': 'A100', 'hue-2': '300', 'hue-3': 'A700' })
+      // background palette
       .backgroundPalette('sogo-grey');
 //      .backgroundPalette(predominant_color);
     $mdThemingProvider.generateThemesOnDemand(false);
@@ -76,7 +79,7 @@
 
   function configure ($mdThemingProvider) {
 
-    // New Galae palettes
+    // New Galae palette
     // possible values: 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, A100, A200, A400, A700
     // the lowest the value the brighter
     // See https://m1.material.io/style/color.html#color-color-palette
@@ -104,21 +107,25 @@
     // https://m1.material.io/style/color.html#color-color-palette
     // SOGo defines some more palettes: sogo-blue, sogo-green, sogo-grey
     // See /usr/lib/GNUstep/SOGo/WebServerResources/js/Common.js
-    var predominant_color = 'sogo-galae-lighter-with-a100-fafafa-like-original'
+    const predominant_color = 'sogo-galae-lighter-with-a100-fafafa-like-original'
+
+    // setting original overrides defined in UI/WebServerResources/js/Common.js
+    const sogo_primaryPalette_overrides = {
+      default: '900', // background color of top toolbars
+      'hue-1': '400', // week numbers in calendar
+      'hue-2': '800', // background color of sidebar toolbar (user name and email)
+      'hue-3': 'A700'
+    }
+    const sogo_accentPalette_overrides = {
+      default: '500',  // background color of fab buttons and login screen
+      'hue-1': 'A100', // background color of center list toolbar
+      'hue-2': '300',  // highlight color for selected mail and current day calendar
+      'hue-3': 'A700'  // new mail button hover color
+    }
 
     $mdThemingProvider.theme('default')
-      .primaryPalette(predominant_color, {
-        default: '900', // background color of top toolbars
-        'hue-1': '400', // week numbers in calendar
-        'hue-2': '800', // background color of sidebar toolbar (user name and email)
-        'hue-3': 'A700'
-      })
-      .accentPalette(predominant_color, {
-        default: '500',  // background color of fab buttons and login screen
-        'hue-1': 'A100', // background color of center list toolbar
-        'hue-2': '300',  // highlight color for selected mail and current day calendar
-        'hue-3': 'A700'  // new mail button hover color
-      })
+      .primaryPalette(predominant_color, sogo_primaryPalette_overrides)
+      .accentPalette(predominant_color, sogo_accentPalette_overrides)
       .backgroundPalette('sogo-grey')
 
     $mdThemingProvider.generateThemesOnDemand(false)
