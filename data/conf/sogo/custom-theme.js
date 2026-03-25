@@ -41,6 +41,7 @@
 // Only switching to a specific palette without changing anything else
 // Material doc adapted for for SOGo
 // https://material.angularjs.org/latest/Theming/03_configuring_a_theme#configuring-a-theme
+// Using SOGo code in UI/WebServerResources/js/Common.js
 /*
 (function() {
   'use strict';
@@ -49,68 +50,84 @@
 
   configure.$inject = ['$mdThemingProvider'];
   function configure($mdThemingProvider) {
-
-    // Pick a color pallete: 'indigo', 'teal', 'cyan', 'blue', 'light-freen' etc.
-    // https://m1.material.io/style/color.html#color-color-palette
-    var predominant_color = 'blue-grey'
+    var predominant_color = 'sogo-blue';
 
     $mdThemingProvider.theme('default')
-      .primaryPalette('light-blue')
-      .accentPalette('blue');
-
+      // palettes with no overrides
+      .primaryPalette(predominant_color)
+      .accentPalette(predominant_color)
+      // palettes with original overrides (UI/WebServerResources/js/Common.js)
+//      .primaryPalette(predominant_color, { default: '900', 'hue-1': '400', 'hue-2': '800', 'hue-3': 'A700' })
+//      .accentPalette(predominant_color, { default: '500', 'hue-1': 'A100', 'hue-2': '300', 'hue-3': 'A700' })
+      // background palette
+      .backgroundPalette('sogo-grey');
+//      .backgroundPalette(predominant_color);
     $mdThemingProvider.generateThemesOnDemand(false);
   }
 })();
-*/
+ */
 
 
 
-//--- Galae specific colors
-(function() {
-  'use strict';
+//--- Galae specific colors v2
+(function () {
+  'use strict'
   angular.module('SOGo.Common')
     .config(configure)
 
-  configure.$inject = ['$mdThemingProvider'];
-  function configure($mdThemingProvider) {
+  configure.$inject = ['$mdThemingProvider']
 
-    // define Galae palette from SOGo "sogo-blue"
-    const GALAE_LOGO_LIGHT = '219ebc';
-    const GALAE_LOGO_MEDIUM = '6AB7D2'; // not in the Galae logo but between DARK and LIGHT
-    const GALAE_LOGO_DARK = '8ecae6';
-    var algooBlue = $mdThemingProvider.extendPalette('sogo-blue', {
-      // possible values: 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, A100, A200, A400, A700
-      // the lowest the value the brighter
-      // See https://m1.material.io/style/color.html#color-color-palette
-      // WARNING: 700 is used for calendar day view time foreground color
-      '50': 'ffffff',
-      '100': GALAE_LOGO_DARK,
-      '200': GALAE_LOGO_MEDIUM,
-      '500': GALAE_LOGO_LIGHT,
-      '600': GALAE_LOGO_LIGHT,
+  function configure ($mdThemingProvider) {
+
+    // New Galae palette
+    // possible values: 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, A100, A200, A400, A700
+    // the lowest the value the brighter
+    // See https://m1.material.io/style/color.html#color-color-palette
+    // WARNING: 700 is used for calendar day view time foreground color
+    $mdThemingProvider.definePalette('sogo-galae-lighter-with-a100-fafafa-like-original', {
+      50: 'eaf6fa',
+      100: 'd5eaf0',
+      200: 'bcdbe4',
+      300: 'a0ccd7',
+      400: '80bac8',
+      500: '65aabc',
+      600: '509eb2',
+      700: '3b92a8',
+      800: '28879f',
+      900: '177d97',
+      A100: 'f0fbfd',
+      A200: '5bd8f0',
+      A400: '00bed6',
+      A700: '009fb5',
+      contrastDefaultColor: 'dark',
+      contrastLightColors: ['500', '600', '700', '800', '900'],
     });
-    $mdThemingProvider.definePalette('algoo-blue', algooBlue);
 
     // Pick a color palette: 'indigo', 'teal', 'cyan', 'blue', 'light-freen' etc.
     // https://m1.material.io/style/color.html#color-color-palette
-    // SOGo defines some more palettes : sogo-blue, sogo-green, sogo-grey
+    // SOGo defines some more palettes: sogo-blue, sogo-green, sogo-grey
     // See /usr/lib/GNUstep/SOGo/WebServerResources/js/Common.js
-    var predominant_color = 'algoo-blue';
+    const predominant_color = 'sogo-galae-lighter-with-a100-fafafa-like-original'
+
+    // setting original overrides defined in UI/WebServerResources/js/Common.js
+    const sogo_primaryPalette_overrides = {
+      default: '900', // background color of top toolbars
+      'hue-1': '400', // week numbers in calendar
+      'hue-2': '800', // background color of sidebar toolbar (user name and email)
+      'hue-3': 'A700'
+    }
+    const sogo_accentPalette_overrides = {
+      default: '500',  // background color of fab buttons and login screen
+      'hue-1': 'A100', // background color of center list toolbar
+      'hue-2': '300',  // highlight color for selected mail and current day calendar
+      'hue-3': 'A700'  // new mail button hover color
+    }
 
     $mdThemingProvider.theme('default')
-      .primaryPalette(predominant_color, {
-        'default': '200',  // background color of top toolbars
-        'hue-1':   '100',  // week numbers in calendar
-        'hue-2':   '100',  // background color of sidebar toolbar (user name and email)
-        'hue-3':   '200',
-      })
-      .accentPalette(predominant_color, {
-        'default': '100',  // background color of fab buttons and login screen
-        'hue-1':   '50',  // background color of center list toolbar
-        'hue-2':   '200',  // highlight color for selected mail and current day calendar
-        'hue-3':   '500',  // new mail button hover color
-      });
+      .primaryPalette(predominant_color, sogo_primaryPalette_overrides)
+      .accentPalette(predominant_color, sogo_accentPalette_overrides)
+      .backgroundPalette('sogo-grey')
 
-    $mdThemingProvider.generateThemesOnDemand(false);
+    $mdThemingProvider.generateThemesOnDemand(false)
   }
-})();
+})()
