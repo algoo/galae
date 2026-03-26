@@ -43,7 +43,7 @@ ALTER TABLE domain ADD COLUMN allow_wildcard_aliases tinyint(1) NOT NULL DEFAULT
 
 This fork also contains some specific Galae customizations : 
 
-| Functionality | Galae Issues | Corresponding MailCow documentation                                                                                                                   |
-|---------------|--------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Favicon       | #39          | [Change favicon - SOGo - mailcow: dockerized documentation](https://docs.mailcow.email/manual-guides/SOGo/u_e-sogo/#change-favicon)                   |
-| SOGo colors   | #41          | [Apply custom SOGo theme - SOGo - mailcow: dockerized documentation](https://docs.mailcow.email/manual-guides/SOGo/u_e-sogo/#apply-custom-sogo-theme) | 
+| Functionality | Galae Issues   | Corresponding MailCow documentation                                                                                                                   |
+|---------------|----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Favicon       | algoo/galae#39 | [Change favicon - SOGo - mailcow: dockerized documentation](https://docs.mailcow.email/manual-guides/SOGo/u_e-sogo/#change-favicon)                   |
+| SOGo colors   | algoo/galae#41 | [Apply custom SOGo theme - SOGo - mailcow: dockerized documentation](https://docs.mailcow.email/manual-guides/SOGo/u_e-sogo/#apply-custom-sogo-theme) | 
