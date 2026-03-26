@@ -26,7 +26,7 @@ MailCow issues and PR states are represent with the following emoji:
 | Wildcard email alias                         | algoo/galae#3, algoo/galae#13, algoo/galae#16 | ❌ mailcow/mailcow-dockerized#1787, <br>  ☑️ mailcow/mailcow-dockerized#2077 with PR ❌ mailcow/mailcow-dockerized#5881, <br> ❌ mailcow/mailcow-dockerized#2507 with PR ⏳️ mailcow/mailcow-dockerized#4015                                                                              |
 
 
-## Update existing MailCow installation for Galae wildcard aliases support
+### Update existing MailCow installation for Galae wildcard aliases support
 
 The wildcard aliases support introduced in PR #5 requires a database schema update for existing mailcow installations. For the moment, this need
 to be done manually. Below is a (very) succinct explanation:
@@ -38,3 +38,12 @@ to be done manually. Below is a (very) succinct explanation:
 ALTER TABLE alias ADD COLUMN is_wildcard tinyint(1) NOT NULL DEFAULT '0' AFTER public_comment;
 ALTER TABLE domain ADD COLUMN allow_wildcard_aliases tinyint(1) NOT NULL DEFAULT '0' AFTER relay_unknown_only;
 ```
+
+## Galae specifics
+
+This fork also contains some specific Galae customizations : 
+
+| Functionality | Galae Issues | Corresponding MailCow documentation                                                                                                                   |
+|---------------|--------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Favicon       | #39          | [Change favicon - SOGo - mailcow: dockerized documentation](https://docs.mailcow.email/manual-guides/SOGo/u_e-sogo/#change-favicon)                   |
+| SOGo colors   | #41          | [Apply custom SOGo theme - SOGo - mailcow: dockerized documentation](https://docs.mailcow.email/manual-guides/SOGo/u_e-sogo/#apply-custom-sogo-theme) | 
