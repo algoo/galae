@@ -366,6 +366,15 @@
                       </div>
                     </div>
                   </div>
+                  {% if mta_sts %}
+                  <div class="row mb-2">
+                    <div class="offset-sm-2 col-sm-10">
+                      <div id="mta-sts-dns-change-warning" class="alert alert-warning mb-0 d-none" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill"></i> {{ lang.edit.mta_sts_dns_change_warning|raw }}
+                      </div>
+                    </div>
+                  </div>
+                  {% endif %}
                   <div class="row mb-2">
                     <div class="offset-sm-2 col-sm-10">
                       {% if mta_sts == false %}
