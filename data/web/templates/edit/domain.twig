@@ -303,6 +303,16 @@
             <div id="collapse-tab-mtasts" class="card-body collapse" data-bs-parent="#domain-content">
                 <h4>{{ lang.edit.mta_sts }}</h4>
                 <p>{{ lang.edit.mta_sts_info|raw }}</p>
+                {% if mta_sts %}
+                <div class="alert alert-info" role="alert">
+                  <p><b>{{ lang.edit.mta_sts_policy_id }}</b>: <code>{{ mta_sts.id }}</code></p>
+                  <p class="mb-1"><b>{{ lang.edit.mta_sts_dns_records }}</b>:</p>
+<pre class="mb-0">_mta-sts     300  TXT    "v={{ mta_sts.version }}; id={{ mta_sts.id }}"
+{% if mta_sts.mode == 'testing' %}_smtp._tls   300  TXT    "v=TLSRPTv1; rua=mailto:tlsrpt@{{ domain }}"
+{% endif %}mta-sts      300  CNAME  {{ mailcow_hostname }}.</pre>
+                  {% if mta_sts.mode == 'testing' %}<small class="text-muted">{{ lang.edit.mta_sts_tlsrpt_notice }}</small>{% endif %}
+                </div>
+                {% endif %}
                 <form data-id="dommtasts" method="post">
                   <input type="hidden" value="0" name="active">
                   <input type="hidden" value="{{ domain }}" name="domain">
