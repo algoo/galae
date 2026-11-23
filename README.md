@@ -25,7 +25,7 @@ MailCow issues and PR states are represent with the following emoji:
 | Allow "0" as local_part (eg "0@example.com") | algoo/galae#7                                 | ✅ mailcow/mailcow-dockerized#5190, <br> ⛔️ mailcow/mailcow-dockerized#5563 with PR ⛔️ mailcow/mailcow-dockerized#5565 and ❌ mailcow/mailcow-dockerized#5619                                                                                                                          |
 | Wildcard email alias                         | algoo/galae#3, algoo/galae#13, algoo/galae#16 | ❌ mailcow/mailcow-dockerized#1787, <br>  ☑️ mailcow/mailcow-dockerized#2077 with PR ❌ mailcow/mailcow-dockerized#5881, <br> ❌ mailcow/mailcow-dockerized#2507 with PR ⏳️ mailcow/mailcow-dockerized#4015                                                                              |
 | Domain MTA-STS tab: add callouts | algoo/galae#53 | ⏳️ mailcow/mailcow-dockerized#7684 |
-| Add domain admin modal: search in domain drop-down | algoo/gale#55 | ⏳️ mailcow/mailcow-dockerized#7685 |
+| Add domain admin modal: search in domain drop-down | algoo/galae#55 | ⏳️ mailcow/mailcow-dockerized#7685 |
 
 ### Update existing MailCow installation for Galae wildcard aliases support
 
